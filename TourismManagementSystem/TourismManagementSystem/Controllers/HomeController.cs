@@ -10,19 +10,20 @@ namespace TourismManagementSystem.Controllers
     {
         public ActionResult Index()
         {
+            ViewBag.ActivePage = "Home";
             return View();
         }
 
         public ActionResult About()
         {
-            ViewBag.Message = "Your application description page.";
+            ViewBag.ActivePage = "About";
 
             return View();
         }
 
         public ActionResult Contact()
         {
-            ViewBag.Message = "Your contact page.";
+            ViewBag.ActivePage = "Contact";
 
             return View();
         }

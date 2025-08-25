@@ -11,6 +11,7 @@ namespace TourismManagementSystem.Controllers
         // GET: Service
         public ActionResult Index()
         {
+            ViewBag.ActivePage = "Services";
             return View();
         }
     }

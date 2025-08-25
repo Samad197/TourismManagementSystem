@@ -11,6 +11,7 @@ namespace TourismManagementSystem.Controllers
         // GET: Booking
         public ActionResult Index()
         {
+            ViewBag.ActivePageGroup = "Pages";
             return View();
         }
     }

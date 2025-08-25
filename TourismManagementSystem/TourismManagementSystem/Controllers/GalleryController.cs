@@ -11,6 +11,7 @@ namespace TourismManagementSystem.Controllers
         // GET: Gallery
         public ActionResult Index()
         {
+            ViewBag.ActivePageGroup = "Pages";
             return View();
         }
     }
