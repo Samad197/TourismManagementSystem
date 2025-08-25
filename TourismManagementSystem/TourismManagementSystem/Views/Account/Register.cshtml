@@ -1,8 +1,8 @@
-﻿@model TourismManagementSystem.Models.RegisterViewModel
+﻿@model TourismManagementSystem.Models.User
 
 @{
     ViewBag.Title = "Register";
-    Layout = "~/Views/Shared/_Layout.cshtml"; // Assuming this is your main layout
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 <!-- Registration Page Banner -->
@@ -26,36 +26,46 @@
             {
                 @Html.AntiForgeryToken()
 
+                <!-- Full Name -->
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.FullName)
                     @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter full name" })
                     @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
                 </div>
 
+                <!-- Email -->
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.Email)
                     @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter email" })
                     @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                 </div>
 
+                <!-- Password -->
                 <div class="form-group mb-3">
-                    @Html.LabelFor(m => m.Phone)
-                    @Html.TextBoxFor(m => m.Phone, new { @class = "form-control", placeholder = "Enter phone number" })
-                    @Html.ValidationMessageFor(m => m.Phone, "", new { @class = "text-danger" })
+                    @Html.Label("Password")
+                    @Html.Password("Password", null, new { @class = "form-control", placeholder = "Enter password" })
+                    <span class="text-muted small">Minimum 6 characters</span>
                 </div>
 
+                <!-- Confirm Password -->
                 <div class="form-group mb-3">
-                    @Html.LabelFor(m => m.Password)
-                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", placeholder = "Enter password" })
-                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
+                    @Html.Label("Confirm Password")
+                    @Html.Password("ConfirmPassword", null, new { @class = "form-control", placeholder = "Re-enter password" })
                 </div>
 
-                <div class="form-group mb-4">
-                    @Html.LabelFor(m => m.ConfirmPassword)
-                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Re-enter password" })
-                    @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
+                <!-- Role Dropdown (Dynamic from DB) -->
+                <div class="form-group mb-3">
+                    @Html.LabelFor(m => m.RoleId, "Role")
+                    @Html.DropDownListFor(
+                        m => m.RoleId,
+                        new SelectList(ViewBag.Roles, "RoleId", "RoleName"),
+                        "-- Select Role --",
+                        new { @class = "form-control" }
+                    )
+                    @Html.ValidationMessageFor(m => m.RoleId, "", new { @class = "text-danger" })
                 </div>
 
+                <!-- Submit -->
                 <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
 
                 <div class="text-center mt-3">
@@ -65,5 +75,3 @@
         </div>
     </div>
 </div>
-
-

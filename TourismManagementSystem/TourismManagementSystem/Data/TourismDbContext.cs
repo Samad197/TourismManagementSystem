@@ -14,6 +14,7 @@ namespace TourismManagementSystem.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<Role> Roles { get; set; }
         public DbSet<TouristProfile> TouristProfiles { get; set; }
         public DbSet<AgencyProfile> AgencyProfiles { get; set; }
         public DbSet<TourPackage> TourPackages { get; set; }
@@ -57,7 +58,10 @@ namespace TourismManagementSystem.Data
                 .HasForeignKey(f => f.TouristId)
                 .WillCascadeOnDelete(false);
 
-            base.OnModelCreating(modelBuilder);
+        
         }
+
+     
+
     }
 }

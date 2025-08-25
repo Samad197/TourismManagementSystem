@@ -7,6 +7,7 @@ using System.Web;
 
 namespace TourismManagementSystem.Models
 {
+
     public class Booking
     {
         public int BookingId { get; set; }

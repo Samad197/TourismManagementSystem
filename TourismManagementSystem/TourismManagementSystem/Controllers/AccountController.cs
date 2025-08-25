@@ -1,43 +1,101 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Web;
 using System.Web.Mvc;
+using TourismManagementSystem.Data;
 using TourismManagementSystem.Models;
 
 namespace TourismManagementSystem.Controllers
 {
     public class AccountController : Controller
     {
+        private readonly TourismDbContext db = new TourismDbContext();
+
         // GET: Account
         public ActionResult Index()
         {
             return View();
         }
 
-      
+
+        // GET: Account/Register
         // GET: Account/Register
         [HttpGet]
         public ActionResult Register()
         {
+            // Load roles from DB to show in dropdown
+            ViewBag.Roles = db.Roles.ToList();
             return View();
         }
+
         // POST: Account/Register
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public ActionResult Register(RegisterViewModel model)
+        public ActionResult Register(User model, string ConfirmPassword)
         {
-            if (ModelState.IsValid)
-            {
-                // TODO: Save user data to database (this example uses TempData only)
-                // In real case, check if email already exists, hash password, save to DB, etc.
+            // Reload roles in case of validation error
+            ViewBag.Roles = db.Roles.ToList();
 
-                TempData["Success"] = "Registration successful! You can now login.";
-                return RedirectToAction("Login");
+            // Model validation
+            if (!ModelState.IsValid)
+            {
+                return View(model);
             }
 
-            return View(model);
+            // Confirm password check
+            if (model.PasswordHash != ConfirmPassword)
+            {
+                ViewBag.Error = "Passwords do not match.";
+                return View(model);
+            }
+
+            // Check if email already exists
+            var existingUser = db.Users.FirstOrDefault(u => u.Email == model.Email);
+            if (existingUser != null)
+            {
+                ViewBag.Error = "Email already registered!";
+                return View(model);
+            }
+
+            // Check if RoleId exists in DB (security)
+            var selectedRole = db.Roles.FirstOrDefault(r => r.RoleId == model.RoleId);
+            if (selectedRole == null)
+            {
+                ViewBag.Error = "Invalid role selected.";
+                return View(model);
+            }
+
+            // Hash the password securely
+            model.PasswordHash = HashPassword(model.PasswordHash);
+            model.CreatedAt = DateTime.Now;
+
+            // Save user to DB
+            db.Users.Add(model);
+            db.SaveChanges();
+
+            TempData["Success"] = "Registration successful! Please login.";
+            return RedirectToAction("Login", "Account");
         }
+
+        // Password hashing method (unchanged)
+        private string HashPassword(string password)
+        {
+            using (SHA256 sha256 = SHA256.Create())
+            {
+                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                StringBuilder sb = new StringBuilder();
+                foreach (byte b in bytes)
+                {
+                    sb.Append(b.ToString("x2"));
+                }
+                return sb.ToString();
+            }
+        }
+
+
 
         // GET: Account/Login
         [HttpGet]

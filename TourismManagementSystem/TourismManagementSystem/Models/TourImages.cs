@@ -7,6 +7,7 @@ using System.Web;
 
 namespace TourismManagementSystem.Models
 {
+
     public class TourImages
     {
         [Key]

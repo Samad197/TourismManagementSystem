@@ -1,13 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq;
 using System.Web;
 
 namespace TourismManagementSystem.Models
 {
+
     public class User
     {
+        [Key]
         public int UserId { get; set; }
 
         [Required]
@@ -23,9 +26,14 @@ namespace TourismManagementSystem.Models
         [DataType(DataType.Password)]
         public string PasswordHash { get; set; }
 
+        // Foreign key for Roles table
         [Required]
-        [RegularExpression("Tourist|Agency|Admin", ErrorMessage = "Role must be Tourist, Agency, or Admin")]
-        public string Role { get; set; }
+        [Display(Name = "Role")]
+        public int RoleId { get; set; }
+
+        // Navigation property
+        [ForeignKey("RoleId")]
+        public virtual Role Role { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.Now;
     }

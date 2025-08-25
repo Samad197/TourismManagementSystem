@@ -156,6 +156,7 @@
     <Compile Include="Models\Feedback.cs" />
     <Compile Include="Models\LoginViewModel.cs" />
     <Compile Include="Models\RegisterViewModel.cs" />
+    <Compile Include="Models\Role.cs" />
     <Compile Include="Models\TourImages.cs" />
     <Compile Include="Models\TouristProfile.cs" />
     <Compile Include="Models\TourPackage.cs" />
