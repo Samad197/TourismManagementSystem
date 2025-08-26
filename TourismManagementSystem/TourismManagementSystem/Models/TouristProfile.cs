@@ -4,7 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Web;
-
+using TourismManagementSystem.Models.ViewModels;
 namespace TourismManagementSystem.Models
 {
     public class TouristProfile
@@ -24,4 +24,5 @@ namespace TourismManagementSystem.Models
         [ForeignKey("UserId")]
         public virtual User User { get; set; }
     }
+
 }

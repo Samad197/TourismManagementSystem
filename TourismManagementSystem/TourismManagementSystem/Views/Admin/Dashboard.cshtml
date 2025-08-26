@@ -1,0 +1,35 @@
+﻿@model TourismManagementSystem.Models.ViewModels.AdminDashboardVm
+@{
+    ViewBag.Title = "Admin Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-4">Admin Dashboard</h3>
+    </div>
+</div>
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {<div class="alert alert-success">@TempData["Success"]</div>}
+    @if (TempData["Info"] != null)
+    {<div class="alert alert-info">@TempData["Info"]</div>}
+
+    <div class="row g-3">
+        <div class="col-md-3"><div class="card p-3"><h6>Pending Agencies</h6><h3>@Model.PendingAgencies</h3></div></div>
+        <div class="col-md-3"><div class="card p-3"><h6>Pending Guides</h6><h3>@Model.PendingGuides</h3></div></div>
+        <div class="col-md-3"><div class="card p-3"><h6>Total Users</h6><h3>@Model.TotalUsers</h3></div></div>
+        <div class="col-md-3"><div class="card p-3"><h6>Total Bookings</h6><h3>@Model.TotalBookings</h3></div></div>
+    </div>
+
+    <div class="card p-3 mt-3">
+        <h6>Paid Revenue</h6>
+        <h3>@Model.PaidRevenue.ToString("N0")</h3>
+    </div>
+
+    <div class="mt-4">
+        <a class="btn btn-primary" href="@Url.Action("Approvals","Admin")">Review Approvals</a>
+        <a class="btn btn-outline-primary ms-2" href="@Url.Action("Users","Admin")">Manage Users</a>
+    </div>
+</div>

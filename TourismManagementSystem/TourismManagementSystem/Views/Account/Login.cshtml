@@ -1,7 +1,8 @@
 ﻿@*@{
         ViewBag.Title = "Index";
     }*@
-@model TourismManagementSystem.Models.LoginViewModel
+
+@model TourismManagementSystem.Models.ViewModels.LoginViewModel
 
 @{
     ViewBag.Title = "Login";
@@ -12,12 +13,13 @@
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width: 900px;">
         <h3 class="text-white display-3 mb-4">
-            Login </h3>
-            <ol class="breadcrumb justify-content-center mb-0">
-                <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
-                <li class="breadcrumb-item"><a href="#">Pages</a></li>
-                <li class="breadcrumb-item active text-white">Login</li>
-            </ol>
+            Login
+        </h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            @*<li class="breadcrumb-item"><a href="#">Pages</a></li>*@
+            <li class="breadcrumb-item active text-white">Login</li>
+        </ol>
     </div>
 </div>
 <!-- Header End -->

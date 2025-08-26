@@ -1,0 +1,37 @@
+﻿@model TourismManagementSystem.Models.ViewModels.PackageBookingVm
+
+@{
+    ViewBag.Title = "Book Package";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-4" style="max-width:700px;">
+    <h3 class="mb-3">Book @Model.PackageTitle</h3>
+
+    @using (Html.BeginForm("Book", "PublicPackage", FormMethod.Post))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.PackageId)
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.FullName)
+            @Html.TextBoxFor(m => m.FullName, new { @class = "form-control" })
+            @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Email)
+            @Html.TextBoxFor(m => m.Email, new { @class = "form-control", type = "email" })
+            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Participants)
+            @Html.TextBoxFor(m => m.Participants, new { @class = "form-control", type = "number", min = "1" })
+            @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-danger" })
+        </div>
+
+        <button type="submit" class="btn btn-success">Confirm Booking</button>
+        <a href="@Url.Action("Index","PublicPackage")" class="btn btn-secondary ms-2">Cancel</a>
+    }
+</div>

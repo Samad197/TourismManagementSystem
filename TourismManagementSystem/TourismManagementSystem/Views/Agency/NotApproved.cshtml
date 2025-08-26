@@ -1,0 +1,32 @@
+﻿@model TourismManagementSystem.Models.AgencyProfile
+
+@{
+    ViewBag.Title = "Awaiting Approval";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container py-5" style="max-width:900px;">
+    <div class="alert alert-warning">
+        <h4 class="mb-2">Your agency is awaiting approval</h4>
+        <p class="mb-0">
+            An administrator must approve your account before your packages and sessions
+            are visible to tourists. Please ensure your <strong>Agency Profile</strong> is complete.
+        </p>
+    </div>
+
+    <div class="card shadow-sm rounded-3">
+        <div class="card-body">
+            <h5 class="card-title mb-3">Next steps</h5>
+            <ul class="mb-4">
+                <li>Complete your profile details and upload required documents.</li>
+                <li>Create draft packages; they’ll go live after approval.</li>
+            </ul>
+            <a href="@Url.Action("Profile","Agency")" class="btn btn-primary me-2">
+                <i class="fas fa-user-cog me-1"></i> Go to Agency Profile
+            </a>
+            <a href="@Url.Action("Create","Package")" class="btn btn-outline-secondary">
+                <i class="fas fa-plus me-1"></i> Create Package (Draft)
+            </a>
+        </div>
+    </div>
+</div>

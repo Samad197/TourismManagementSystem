@@ -129,38 +129,74 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="Controllers\AccountController.cs" />
     <Compile Include="Controllers\AdminController.cs" />
+    <Compile Include="Controllers\AgencyController.cs" />
+    <Compile Include="Controllers\BaseController.cs" />
     <Compile Include="Controllers\BookingController.cs" />
     <Compile Include="Controllers\DestinationController.cs" />
     <Compile Include="Controllers\GalleryController.cs" />
     <Compile Include="Controllers\GuideController.cs" />
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\PackageController.cs" />
+    <Compile Include="Controllers\PackageSessionsController.cs" />
+    <Compile Include="Controllers\PublicPackageController.cs" />
     <Compile Include="Controllers\ServiceController.cs" />
     <Compile Include="Controllers\TourController.cs" />
+    <Compile Include="Controllers\TouristController.cs" />
     <Compile Include="Controllers\UserController.cs" />
     <Compile Include="Data\TourismDbContext.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\202508210732182_InitialCreate.cs" />
-    <Compile Include="Migrations\202508210732182_InitialCreate.Designer.cs">
-      <DependentUpon>202508210732182_InitialCreate.cs</DependentUpon>
+    <Compile Include="Migrations\202508250819133_InitialBaseline.cs" />
+    <Compile Include="Migrations\202508250819133_InitialBaseline.Designer.cs">
+      <DependentUpon>202508250819133_InitialBaseline.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\202508210744023_FinalFixForCascade.cs" />
-    <Compile Include="Migrations\202508210744023_FinalFixForCascade.Designer.cs">
-      <DependentUpon>202508210744023_FinalFixForCascade.cs</DependentUpon>
+    <Compile Include="Migrations\202508251011032_AddUserApprovalAndFlags.cs" />
+    <Compile Include="Migrations\202508251011032_AddUserApprovalAndFlags.Designer.cs">
+      <DependentUpon>202508251011032_AddUserApprovalAndFlags.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.cs" />
+    <Compile Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.Designer.cs">
+      <DependentUpon>202508251037551_MakeFeedbackSharedPkWithBooking.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508251338044_MakeSessionBasedBooking.cs" />
+    <Compile Include="Migrations\202508251338044_MakeSessionBasedBooking.Designer.cs">
+      <DependentUpon>202508251338044_MakeSessionBasedBooking.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508260600445_SeedAdminAndRoles.cs" />
+    <Compile Include="Migrations\202508260600445_SeedAdminAndRoles.Designer.cs">
+      <DependentUpon>202508260600445_SeedAdminAndRoles.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508261000209_FixFeedbackRelation.cs" />
+    <Compile Include="Migrations\202508261000209_FixFeedbackRelation.Designer.cs">
+      <DependentUpon>202508261000209_FixFeedbackRelation.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508261404458_AddSessionsTable.cs" />
+    <Compile Include="Migrations\202508261404458_AddSessionsTable.Designer.cs">
+      <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AgencyProfile.cs" />
     <Compile Include="Models\Booking.cs" />
     <Compile Include="Models\Feedback.cs" />
-    <Compile Include="Models\LoginViewModel.cs" />
-    <Compile Include="Models\RegisterViewModel.cs" />
+    <Compile Include="Models\GuideProfile.cs" />
     <Compile Include="Models\Role.cs" />
+    <Compile Include="Models\Session.cs" />
     <Compile Include="Models\TourImages.cs" />
     <Compile Include="Models\TouristProfile.cs" />
     <Compile Include="Models\TourPackage.cs" />
+    <Compile Include="Models\TourSession.cs" />
     <Compile Include="Models\User.cs" />
+    <Compile Include="Models\ViewModels\AdminViewModels.cs" />
+    <Compile Include="Models\ViewModels\AgencyDashboardVm.cs" />
+    <Compile Include="Models\ViewModels\GuideListItemVm.cs" />
+    <Compile Include="Models\ViewModels\LoginViewModel.cs" />
+    <Compile Include="Models\ViewModels\PackageCreateVm.cs" />
+    <Compile Include="Models\ViewModels\PackageViewModels.cs" />
+    <Compile Include="Models\ViewModels\PublicPackageListItemVm.cs" />
+    <Compile Include="Models\ViewModels\RegisterViewModel.cs" />
+    <Compile Include="Models\ViewModels\SessionViewModels.cs" />
+    <Compile Include="Models\ViewModels\TouristDashboardVms.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -384,9 +420,25 @@
     <Content Include="Views\Admin\Index.cshtml" />
     <Content Include="Views\Account\Login.cshtml" />
     <Content Include="Views\Account\Register.cshtml" />
+    <Content Include="Views\Tourist\Dashboard.cshtml" />
+    <Content Include="Views\Admin\Dashboard.cshtml" />
+    <Content Include="Views\Admin\Approvals.cshtml" />
+    <Content Include="Views\Admin\Users.cshtml" />
+    <Content Include="Views\Agency\Dashboard.cshtml" />
+    <Content Include="Views\Agency\NotApproved.cshtml" />
+    <Content Include="Views\Agency\Profile.cshtml" />
+    <Content Include="Views\Package\Create.cshtml" />
+    <Content Include="Views\PublicPackage\Index.cshtml" />
+    <Content Include="Views\PublicPackage\Booking.cshtml" />
+    <Content Include="Views\PublicPackage\Details.cshtml" />
+    <Content Include="Views\PackageSessions\Create.cshtml" />
+    <Content Include="Views\PackageSessions\Delete.cshtml" />
+    <Content Include="Views\PackageSessions\Edit.cshtml" />
+    <Content Include="Views\PackageSessions\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
+    <Folder Include="Views\Base\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Content\bootstrap.rtl.min.css.map" />
@@ -416,11 +468,26 @@
     <Content Include="Scripts\jquery-3.4.1.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\202508210732182_InitialCreate.resx">
-      <DependentUpon>202508210732182_InitialCreate.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202508250819133_InitialBaseline.resx">
+      <DependentUpon>202508250819133_InitialBaseline.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508210744023_FinalFixForCascade.resx">
-      <DependentUpon>202508210744023_FinalFixForCascade.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202508251011032_AddUserApprovalAndFlags.resx">
+      <DependentUpon>202508251011032_AddUserApprovalAndFlags.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.resx">
+      <DependentUpon>202508251037551_MakeFeedbackSharedPkWithBooking.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508251338044_MakeSessionBasedBooking.resx">
+      <DependentUpon>202508251338044_MakeSessionBasedBooking.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508260600445_SeedAdminAndRoles.resx">
+      <DependentUpon>202508260600445_SeedAdminAndRoles.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508261000209_FixFeedbackRelation.resx">
+      <DependentUpon>202508261000209_FixFeedbackRelation.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508261404458_AddSessionsTable.resx">
+      <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

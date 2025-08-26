@@ -10,27 +10,24 @@ namespace TourismManagementSystem.Models
 
     public class AgencyProfile
     {
-        [Key]
-        public int ProfileId { get; set; }
-
-        [Required]
+        // PK = FK to User (shared primary key 1↔0..1)
+        [Key, ForeignKey("User")]
         public int UserId { get; set; }
+        public virtual User User { get; set; }
 
-        [Required]
-        [StringLength(100)]
+        [Required, StringLength(100)]
         public string AgencyName { get; set; }
 
         public string Description { get; set; }
-
         public string LogoPath { get; set; }
 
-        [Phone]
-        public string Phone { get; set; }
+        [Phone] public string Phone { get; set; }
+        [Url] public string Website { get; set; }
 
-        [Url]
-        public string Website { get; set; }
+        [Required, StringLength(30)]
+        public string Status { get; set; } = "PendingVerification"; // or Approved/Rejected
 
-        [ForeignKey("UserId")]
-        public virtual User User { get; set; }
+        public string VerificationDocPath { get; set; }
     }
+
 }

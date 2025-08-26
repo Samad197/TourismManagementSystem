@@ -16,10 +16,10 @@ namespace TourismManagementSystem.Models
         [Required]
         public int PackageId { get; set; }
 
-        [Required]
+        [Required, StringLength(255)]
         public string ImagePath { get; set; }
 
         [ForeignKey("PackageId")]
-        public virtual TourPackage TourPackage { get; set; }
+        public virtual TourPackage Package { get; set; }
     }
 }

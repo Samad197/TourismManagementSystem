@@ -1,126 +1,289 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
-using System.Web;
 using System.Web.Mvc;
+using System.Web.Security;
+using System.Security.Cryptography;
+using System.Data.Entity;                     // <-- needed for Include
 using TourismManagementSystem.Data;
 using TourismManagementSystem.Models;
-
+using TourismManagementSystem.Models.ViewModels;
+using System.Data.Entity.Infrastructure;
+using System.Data.Entity.Validation;
+using System.Data;
 namespace TourismManagementSystem.Controllers
 {
-    public class AccountController : Controller
+    // Inherit BaseController so ViewBag.IsApproved is set automatically
+    public class AccountController : BaseController
     {
+        // Use the db from BaseController if you like; keeping your local for clarity:
         private readonly TourismDbContext db = new TourismDbContext();
 
-        // GET: Account
+        // GET: /Account
+        [AllowAnonymous]
         public ActionResult Index()
         {
             return View();
         }
 
-
-        // GET: Account/Register
-        // GET: Account/Register
+        // GET: /Account/Register
+        [AllowAnonymous]
         [HttpGet]
         public ActionResult Register()
         {
-            // Load roles from DB to show in dropdown
-            ViewBag.Roles = db.Roles.ToList();
-            return View();
+            ViewBag.Roles = db.Roles
+                              .Where(r => r.RoleName != "Admin") // hide Admin in UI
+                              .OrderBy(r => r.RoleName)
+                              .ToList();
+            return View(new RegisterViewModel());
         }
 
-        // POST: Account/Register
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Register(User model, string ConfirmPassword)
+        // POST: /Account/Register
+        [AllowAnonymous]
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Register(RegisterViewModel vm)
         {
-            // Reload roles in case of validation error
-            ViewBag.Roles = db.Roles.ToList();
+            ViewBag.Roles = db.Roles
+                              .Where(r => r.RoleName != "Admin")
+                              .OrderBy(r => r.RoleName)
+                              .ToList();
 
-            // Model validation
-            if (!ModelState.IsValid)
+            if (!ModelState.IsValid) return View(vm);
+
+            // 1) Fast checks (outside transaction)
+            var exists = db.Users.AsNoTracking().Any(u => u.Email == vm.Email);
+            if (exists)
             {
-                return View(model);
+                ModelState.AddModelError("Email", "This email is already registered.");
+                return View(vm);
             }
 
-            // Confirm password check
-            if (model.PasswordHash != ConfirmPassword)
+            var role = db.Roles.Find(vm.RoleId);
+            if (role == null || role.RoleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
             {
-                ViewBag.Error = "Passwords do not match.";
-                return View(model);
+                ModelState.AddModelError("RoleId", "Invalid role selection.");
+                return View(vm);
             }
 
-            // Check if email already exists
-            var existingUser = db.Users.FirstOrDefault(u => u.Email == model.Email);
-            if (existingUser != null)
+            var roleName = role.RoleName.Trim();
+
+            // 2) Build entities (do NOT SaveChanges yet)
+            var user = new User
             {
-                ViewBag.Error = "Email already registered!";
-                return View(model);
+                FullName = vm.FullName.Trim(),
+                Email = vm.Email.Trim(),
+                PasswordHash = HashPassword(vm.Password),
+                RoleId = vm.RoleId,
+                EmailConfirmed = false,
+                IsActive = true,
+                IsApproved = roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase),
+                CreatedAt = DateTime.UtcNow
+            };
+            db.Users.Add(user);
+
+            if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
+            {
+                db.TouristProfiles.Add(new TouristProfile
+                {
+                    User = user // navigation, EF will set FK after inserting User
+                });
+            }
+            else if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
+            {
+                db.AgencyProfiles.Add(new AgencyProfile
+                {
+                    User = user,
+                    AgencyName = "",
+                    Description = "",
+                    Status = "PendingVerification"
+                });
+            }
+            else if (roleName.Equals("Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                db.GuideProfiles.Add(new GuideProfile
+                {
+                    User = user,
+                    FullNameOnLicense = user.FullName,
+                    GuideLicenseNo = "",
+                    Bio = "",
+                    Status = "PendingVerification"
+                });
+            }
+            else
+            {
+                ModelState.AddModelError("RoleId", "Unsupported role selected.");
+                return View(vm);
             }
 
-            // Check if RoleId exists in DB (security)
-            var selectedRole = db.Roles.FirstOrDefault(r => r.RoleId == model.RoleId);
-            if (selectedRole == null)
+            // 3) One atomic commit with rollback on error
+            using (var tx = db.Database.BeginTransaction(IsolationLevel.ReadCommitted))
             {
-                ViewBag.Error = "Invalid role selected.";
-                return View(model);
+                try
+                {
+                    db.SaveChanges(); // inserts User + profile in the correct order
+                    tx.Commit();
+                }
+                catch (DbEntityValidationException vex)
+                {
+                    tx.Rollback();
+                    var sb = new StringBuilder();
+                    foreach (var e in vex.EntityValidationErrors)
+                        foreach (var ve in e.ValidationErrors)
+                            sb.AppendLine($"{ve.PropertyName}: {ve.ErrorMessage}");
+                    ModelState.AddModelError("", "Validation failed: " + sb.ToString());
+                    return View(vm);
+                }
+                catch (DbUpdateException uex)
+                {
+                    tx.Rollback();
+
+                    // If you add a unique index on Email (see below), this catch
+                    // will handle duplicate email races gracefully.
+                    ModelState.AddModelError("", "Could not complete registration. The email may already be registered or data is invalid.");
+                    // TODO: log uex for diagnostics
+                    return View(vm);
+                }
+                catch (Exception ex)
+                {
+                    tx.Rollback();
+                    ModelState.AddModelError("", "Unexpected error while registering. Please try again.");
+                    // TODO: log ex
+                    return View(vm);
+                }
             }
 
-            // Hash the password securely
-            model.PasswordHash = HashPassword(model.PasswordHash);
-            model.CreatedAt = DateTime.Now;
-
-            // Save user to DB
-            db.Users.Add(model);
-            db.SaveChanges();
-
-            TempData["Success"] = "Registration successful! Please login.";
-            return RedirectToAction("Login", "Account");
+            // 4) Post-commit redirects
+            if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Success"] = "Account created. Please login.";
+                return RedirectToAction("Login");
+            }
+            if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Info"] = "Account created. Complete your Agency profile for approval.";
+                return RedirectToAction("CompleteAgencyProfile", "Agency");
+            }
+            // Guide
+            TempData["Info"] = "Account created. Complete your Guide profile for approval.";
+            return RedirectToAction("CompleteGuideProfile", "Guide");
         }
 
-        // Password hashing method (unchanged)
+
+        // GET: /Account/Login
+        // GET: /Account/Login
+        [AllowAnonymous]
+        [HttpGet]
+        public ActionResult Login(string returnUrl)
+        {
+            ViewBag.ReturnUrl = returnUrl;
+            return View(new LoginViewModel());
+        }
+
+        // POST: /Account/Login
+        [AllowAnonymous]
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Login(LoginViewModel vm, string returnUrl)
+        {
+            if (!ModelState.IsValid) return View(vm);
+
+            var user = db.Users.Include(u => u.Role)
+                               .FirstOrDefault(u => u.Email == vm.Email);
+
+            if (user == null || user.PasswordHash != HashPassword(vm.Password) || !user.IsActive)
+            {
+                ModelState.AddModelError("", "Invalid email or password.");
+                return View(vm);
+            }
+
+            var roleName = (user.Role.RoleName ?? "").Trim();
+
+            // Issue Forms auth ticket WITH role in UserData
+            var ticket = new FormsAuthenticationTicket(
+                1,
+                user.Email,
+                DateTime.Now,
+                DateTime.Now.AddHours(6),
+                vm.RememberMe,
+                roleName // <— put the role here
+            );
+
+            var enc = FormsAuthentication.Encrypt(ticket);
+            var cookie = new System.Web.HttpCookie(FormsAuthentication.FormsCookieName, enc)
+            {
+                HttpOnly = true,
+                Secure = FormsAuthentication.RequireSSL
+            };
+            Response.Cookies.Add(cookie);
+
+            // (Optional) convenience for legacy code
+            Session["RoleName"] = roleName;
+
+            // Role-based landing with approval gates
+            if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
+                return SafeRedirect(returnUrl, "Dashboard", "Tourist");
+
+            if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
+                return user.IsApproved
+                    ? SafeRedirect(returnUrl, "Dashboard", "Agency")
+                    : RedirectToAction("Dashboard", "Agency");
+
+            if (roleName.Equals("Guide", StringComparison.OrdinalIgnoreCase))
+                return user.IsApproved
+                    ? SafeRedirect(returnUrl, "Dashboard", "Guide")
+                    : RedirectToAction("Dashboard", "Guide");
+
+            if (roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
+                return RedirectToAction("Dashboard", "Admin");
+
+            return RedirectToAction("Index", "Home");
+        }
+
+        // Helper: prevents null URL issues & only allows local returnUrl
+        private ActionResult SafeRedirect(string returnUrl, string fallbackAction, string fallbackController)
+        {
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction(fallbackAction, fallbackController);
+        }
+
+
+        // POST: /Account/Logout
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult Logout()
+        {
+            FormsAuthentication.SignOut();
+            Session.Clear();
+            return RedirectToAction("Index", "Home");
+        }
+
+        [Authorize]
+        [HttpGet]
+        public ActionResult Settings()
+        {
+            var email = User.Identity.Name;
+            var me = db.Users.Include(u => u.Role).FirstOrDefault(u => u.Email == email);
+            if (me == null) return RedirectToAction("Login");
+            return View(me); // or a SettingsViewModel
+        }
+
+        // ===== helpers =====
         private string HashPassword(string password)
         {
-            using (SHA256 sha256 = SHA256.Create())
+            using (var sha = SHA256.Create())
             {
-                byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-                StringBuilder sb = new StringBuilder();
-                foreach (byte b in bytes)
-                {
-                    sb.Append(b.ToString("x2"));
-                }
+                var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password ?? ""));
+                var sb = new StringBuilder();
+                foreach (var b in bytes) sb.Append(b.ToString("x2"));
                 return sb.ToString();
             }
         }
 
-
-
-        // GET: Account/Login
-        [HttpGet]
-        public ActionResult Login()
+        private ActionResult SafeRedirect(string returnUrl, string fallBackUrl)
         {
-            return View();
-        }
-        // POST: Account/Login
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public ActionResult Login(LoginViewModel model)
-        {
-            if (ModelState.IsValid)
-            {
-                // TODO: Authenticate user here
-                if (model.Email == "admin@example.com" && model.Password == "admin123")
-                {
-                    // Simulate login success (replace with real auth logic later)
-                    TempData["Success"] = "Logged in successfully!";
-                    return RedirectToAction("Index", "Home");
-                }
-
-                ModelState.AddModelError("", "Invalid email or password.");
-            }
-            return View(model);
+            if (!string.IsNullOrWhiteSpace(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+            return Redirect(fallBackUrl);
         }
     }
 }

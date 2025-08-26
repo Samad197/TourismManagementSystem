@@ -1,19 +1,28 @@
-﻿@model TourismManagementSystem.Models.User
-
+﻿@model TourismManagementSystem.Models.ViewModels.RegisterViewModel
 @{
     ViewBag.Title = "Register";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
-<!-- Registration Page Banner -->
+<!-- Page Banner -->
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width: 900px;">
         <h3 class="text-white display-3 mb-4">Register</h3>
         <ol class="breadcrumb justify-content-center mb-0">
-            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index","Home")">Home</a></li>
             <li class="breadcrumb-item active text-white">Register</li>
         </ol>
     </div>
+</div>
+
+<!-- Flash messages -->
+<div class="container mt-4">
+    @if (TempData["Success"] != null)
+    {<div class="alert alert-success">@TempData["Success"]</div>}
+    @if (TempData["Info"] != null)
+    {<div class="alert alert-info">@TempData["Info"]</div>}
+    @if (TempData["Error"] != null)
+    {<div class="alert alert-danger">@TempData["Error"]</div>}
 </div>
 
 <!-- Registration Form -->
@@ -22,56 +31,79 @@
         <div class="col-md-6 bg-light p-5 rounded shadow">
             <h2 class="text-center mb-4">Create Your Account</h2>
 
-            @using (Html.BeginForm("Register", "Account", FormMethod.Post))
+            @using (Html.BeginForm("Register", "Account", FormMethod.Post, new { autocomplete = "off" }))
             {
                 @Html.AntiForgeryToken()
 
-                <!-- Full Name -->
+                @Html.ValidationSummary(true, "", new { @class = "text-danger mb-3" })
+
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.FullName)
-                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter full name" })
+                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter full name", maxlength = "100", autofocus = "autofocus" })
                     @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
                 </div>
 
-                <!-- Email -->
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.Email)
-                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter email" })
+                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter email", type = "email", autocomplete = "email" })
                     @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                 </div>
 
-                <!-- Password -->
                 <div class="form-group mb-3">
-                    @Html.Label("Password")
-                    @Html.Password("Password", null, new { @class = "form-control", placeholder = "Enter password" })
+                    @Html.LabelFor(m => m.Password)
+                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", placeholder = "Enter password", autocomplete = "new-password" })
                     <span class="text-muted small">Minimum 6 characters</span>
+                    @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
                 </div>
 
-                <!-- Confirm Password -->
                 <div class="form-group mb-3">
-                    @Html.Label("Confirm Password")
-                    @Html.Password("ConfirmPassword", null, new { @class = "form-control", placeholder = "Re-enter password" })
+                    @Html.LabelFor(m => m.ConfirmPassword, "Confirm Password")
+                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Re-enter password", autocomplete = "new-password" })
+                    @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
                 </div>
 
-                <!-- Role Dropdown (Dynamic from DB) -->
-                <div class="form-group mb-3">
+                <div class="form-group mb-2">
                     @Html.LabelFor(m => m.RoleId, "Role")
                     @Html.DropDownListFor(
                         m => m.RoleId,
                         new SelectList(ViewBag.Roles, "RoleId", "RoleName"),
                         "-- Select Role --",
-                        new { @class = "form-control" }
+                        new { @class = "form-control", id = "RoleId" }
                     )
                     @Html.ValidationMessageFor(m => m.RoleId, "", new { @class = "text-danger" })
                 </div>
 
-                <!-- Submit -->
+                <div id="roleHint" class="alert alert-info py-2 px-3 small d-none mb-3">
+                    Travel Agencies and Tour Guides can self-register but must be approved by Admin before publishing tours.
+                    You’ll be redirected to complete your profile after registering.
+                </div>
+
                 <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
 
                 <div class="text-center mt-3">
-                    <small>Already have an account? <a href="@Url.Action("Login", "Account")">Login here</a></small>
+                    <small>Already have an account? <a href="@Url.Action("Login","Account")">Login here</a></small>
                 </div>
             }
         </div>
     </div>
 </div>
+
+@section scripts{
+    <script>
+        (function () {
+            function toggleHint() {
+                var sel = document.getElementById('RoleId');
+                if (!sel) return;
+                var text = (sel.options[sel.selectedIndex] || {}).text || "";
+                var isPartner = /TravelAgency|TourGuide/i.test(text);
+                var hint = document.getElementById('roleHint');
+                if (hint) {
+                    if (isPartner) hint.classList.remove('d-none');
+                    else hint.classList.add('d-none');
+                }
+            }
+            document.getElementById('RoleId')?.addEventListener('change', toggleHint);
+            toggleHint();
+        })();
+    </script>
+}

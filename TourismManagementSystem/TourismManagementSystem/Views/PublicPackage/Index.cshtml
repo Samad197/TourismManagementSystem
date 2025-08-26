@@ -1,0 +1,72 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.PublicPackageListItemVm>
+
+@{
+    ViewBag.Title = "Available Packages";
+}
+
+<!-- Header Start -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">
+            Packages
+        </h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            @*<li class="breadcrumb-item"><a href="#">Pages</a></li>*@
+            <li class="breadcrumb-item active text-white">Packages</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
+<div class="container mt-4">
+    <h2 class="mb-4">Available Travel Packages</h2>
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-warning">No packages found matching your criteria.</div>
+    }
+    else
+    {
+        <div class="row">
+            @foreach (var pkg in Model)
+            {
+                <div class="col-md-4 mb-4">
+                    <div class="card shadow-sm h-100">
+                        <img src="@pkg.ThumbnailPath" class="card-img-top" alt="@pkg.Title" style="height: 200px; object-fit: cover;">
+                        <div class="card-body">
+                            <h5 class="card-title">@pkg.Title</h5>
+                            <p class="card-text">
+                                <strong>Price:</strong> @pkg.Price.ToString("C") <br />
+                                <strong>Duration:</strong> @pkg.DurationDays days <br />
+                                <strong>Max Group:</strong> @pkg.MaxGroupSize <br />
+                                <strong>Owner:</strong> @pkg.OwnerName (@pkg.OwnerType)
+                            </p>
+                            @*@if (pkg.AvgRating.HasValue)
+                                {
+                                    <p><strong>Rating:</strong> @pkg.AvgRating.Value.ToString("0.0") ⭐</p>
+                                }
+                                else
+                                {
+                                    <p><em>No reviews yet</em></p>
+                                }*@
+
+                            @if (pkg.HasUpcoming)
+                            {
+                                <span class="badge bg-success">Upcoming Sessions Available</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">No Upcoming Sessions</span>
+                            }
+                        </div>
+                        <div class="card-footer text-center">
+                            <a href="@Url.Action("Details", "PublicPackage", new { id = pkg.PackageId })" class="btn btn-primary">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

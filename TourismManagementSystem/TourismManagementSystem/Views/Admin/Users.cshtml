@@ -1,0 +1,81 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.AdminUserListItemVm>
+    @{
+    ViewBag.Title = "Manage Users";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+    }
+
+    <div class="container-fluid bg-breadcrumb">
+        <div class="container text-center py-5" style="max-width:900px;">
+            <h3 class="text-white display-3 mb-4">Users</h3>
+        </div>
+    </div>
+
+    <div class="container py-4">
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Active</th>
+                        <th>Approved</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                    <tr>
+                        <td>@u.RoleName</td>
+                        <td>@u.FullName</td>
+                        <td>@u.Email</td>
+                        <td>@u.IsActive</td>
+                        <td>@u.IsApproved</td>
+                        <td>@u.CreatedAt.ToString("yyyy-MM-dd")</td>
+                        <td class="d-flex">
+                            @{
+                                var isSelf = string.Equals(u.Email, User.Identity.Name, StringComparison.OrdinalIgnoreCase);
+                                var isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
+                                var isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
+                            }
+
+                            <!-- Toggle Active: show for everyone EXCEPT Admin rows and self -->
+                            @if (!isSelf && !isAdminRow)
+                            {
+                                using (Html.BeginForm("ToggleActive", "Admin", FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    @Html.Hidden("id", u.UserId)
+                                    <button class="btn btn-sm btn-outline-secondary me-2" type="submit">Toggle Active</button>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted me-2">—</span>
+                            }
+
+                            <!-- Toggle Approved: only for Agency/Guide; never for Admin/Tourist/self -->
+                            @if (isProvider && !isSelf)
+                            {
+                                using (Html.BeginForm("ToggleApproved", "Admin", FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    @Html.Hidden("id", u.UserId)
+                                    <button class="btn btn-sm btn-outline-primary" type="submit">Toggle Approved</button>
+                                }
+                            }
+                            else
+                            {
+                                <span class="text-muted">—</span>
+                            }
+                        </td>
+
+
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>

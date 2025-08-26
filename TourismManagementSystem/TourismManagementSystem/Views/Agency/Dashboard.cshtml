@@ -1,0 +1,167 @@
+﻿@model TourismManagementSystem.Models.ViewModels.AgencyDashboardVm
+@{
+    ViewBag.Title = "Agency Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">Agency Dashboard</h3>
+        <p class="text-white-50 mb-0">Welcome, @Model.AgencyName</p>
+    </div>
+</div>
+
+<div class="container py-4">
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-2">
+            <div class="card shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold">Packages</div>
+                <div class="display-6">@Model.TotalPackages</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold">Upcoming</div>
+                <div class="display-6">@Model.UpcomingSessions</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold">Bookings</div>
+                <div class="display-6">@Model.TotalBookings</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold">Paid Revenue</div>
+                <div class="h4">@Model.PaidRevenue.ToString("C")</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card shadow-sm rounded-3 text-center p-3">
+                <div class="fw-bold">Pending Payments</div>
+                <div class="display-6">@Model.PendingPayments</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Upcoming Sessions -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm rounded-3">
+                <div class="card-header bg-light fw-bold">Upcoming Sessions</div>
+                <div class="card-body p-0">
+                    @if (!Model.NextSessions.Any())
+                    {
+                        <div class="p-3 text-muted">No upcoming sessions.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Package</th>
+                                    <th>Start</th>
+                                    <th>Booked/Cap</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in Model.NextSessions)
+                                {
+                                    <tr>
+                                        <td>@s.PackageTitle</td>
+                                        <td>@s.StartDate.ToString("yyyy-MM-dd HH:mm")</td>
+                                        <td>@s.Booked / @s.Capacity</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Bookings -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm rounded-3">
+                <div class="card-header bg-light fw-bold">Recent Bookings</div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentBookings.Any())
+                    {
+                        <div class="p-3 text-muted">No bookings yet.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Package</th>
+                                    <th>Date</th>
+                                    <th>Pax</th>
+                                    <th>Payment</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var b in Model.RecentBookings)
+                                {
+                                    <tr>
+                                        <td>@b.PackageTitle</td>
+                                        <td>@b.StartDate.ToString("yyyy-MM-dd")</td>
+                                        <td>@b.Participants</td>
+                                        <td>@b.PaymentStatus</td>
+                                        <td>@b.Amount.ToString("C")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Feedback -->
+        <div class="col-lg-12">
+            <div class="card shadow-sm rounded-3">
+                <div class="card-header bg-light fw-bold">Recent Feedback</div>
+                <div class="card-body p-0">
+                    @if (!Model.RecentFeedback.Any())
+                    {
+                        <div class="p-3 text-muted">No feedback yet.</div>
+                    }
+                    else
+                    {
+                        <table class="table table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Package</th>
+                                    <th>Rating</th>
+                                    <th>Comment</th>
+                                    <th>When</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var f in Model.RecentFeedback)
+                                {
+                                    <tr>
+                                        <td>@f.PackageTitle</td>
+                                        <td>@f.Rating</td>
+                                        <td>@f.Comment</td>
+                                        <td>@f.CreatedAt.ToString("yyyy-MM-dd")</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <a href="@Url.Action("Create","Package")" class="btn btn-primary me-2"><i class="fas fa-plus me-1"></i> Create Package</a>
+        <a href="@Url.Action("Index","Package")" class="btn btn-outline-secondary me-2"><i class="fas fa-archive me-1"></i> My Packages</a>
+        <a href="@Url.Action("Sessions","Agency")" class="btn btn-outline-secondary"><i class="far fa-calendar-alt me-1"></i> Sessions</a>
+    </div>
+</div>

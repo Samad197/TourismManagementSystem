@@ -1,0 +1,59 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.PendingUserVm>
+@{
+    ViewBag.Title = "Approvals";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-4">Pending Approvals</h3>
+    </div>
+</div>
+
+<div class="container py-4">
+    @if (!Model.Any())
+    {
+        <div class="alert alert-success">No pending Agencies or Guides.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead>
+                    <tr>
+                        <th>Role</th>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Profile Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var u in Model)
+                    {
+                        <tr>
+                            <td>@u.RoleName</td>
+                            <td>@u.FullName</td>
+                            <td>@u.Email</td>
+                            <td>@(string.IsNullOrEmpty(u.ProfileStatus) ? "-" : u.ProfileStatus)</td>
+                            <td class="d-flex">
+                                @using (Html.BeginForm("Approve", "Admin", FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    @Html.Hidden("id", u.UserId)
+                                    <button class="btn btn-sm btn-success me-2" type="submit">Approve</button>
+                                }
+                                @using (Html.BeginForm("Reject", "Admin", FormMethod.Post))
+                                {
+                                    @Html.AntiForgeryToken()
+                                    @Html.Hidden("id", u.UserId)
+                                    <button class="btn btn-sm btn-outline-danger" type="submit">Reject</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

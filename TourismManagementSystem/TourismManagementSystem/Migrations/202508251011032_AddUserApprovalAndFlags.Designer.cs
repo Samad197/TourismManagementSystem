@@ -7,13 +7,13 @@ namespace TourismManagementSystem.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.5.1")]
-    public sealed partial class FinalFixForCascade : IMigrationMetadata
+    public sealed partial class AddUserApprovalAndFlags : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(FinalFixForCascade));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(AddUserApprovalAndFlags));
         
         string IMigrationMetadata.Id
         {
-            get { return "202508210744023_FinalFixForCascade"; }
+            get { return "202508251011032_AddUserApprovalAndFlags"; }
         }
         
         string IMigrationMetadata.Source

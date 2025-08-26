@@ -10,26 +10,24 @@ namespace TourismManagementSystem.Models
 
     public class Feedback
     {
-        public int FeedbackId { get; set; }
+        [Key]
+        public int FeedbackId { get; set; }      // <— NEW identity PK
 
         [Required]
-        public int TouristId { get; set; }
+        [Index("IX_Feedback_Booking", IsUnique = true)]  // one feedback per booking
+        public int BookingId { get; set; }
 
-        [Required]
-        public int PackageId { get; set; }
-
-        [StringLength(1000)]
-        public string Comments { get; set; }
+        [ForeignKey(nameof(BookingId))]
+        public virtual Booking Booking { get; set; }
 
         [Range(1, 5)]
         public int Rating { get; set; }
 
-        public DateTime SubmittedAt { get; set; } = DateTime.Now;
+        [StringLength(1000)]
+        public string Comment { get; set; }      // <— renamed from Comments
 
-        [ForeignKey("TouristId")]
-        public virtual TouristProfile Tourist { get; set; }
-
-        [ForeignKey("PackageId")]
-        public virtual TourPackage TourPackage { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }
+
+
 }

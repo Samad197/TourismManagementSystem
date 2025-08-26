@@ -10,27 +10,30 @@ namespace TourismManagementSystem.Models
 
     public class Booking
     {
-        public int BookingId { get; set; }
+        [Key] public int BookingId { get; set; }
 
-        [Required]
         public int TouristId { get; set; }
+        [ForeignKey("TouristId")] public virtual User Tourist { get; set; }
 
-        [Required]
-        public int PackageId { get; set; }
+        public int SessionId { get; set; }
+        [ForeignKey("SessionId")] public virtual TourSession Session { get; set; }
 
-        [Range(1, 100)]
-        public int NumberOfPeople { get; set; }
+        [Range(1, 1000)] public int Participants { get; set; }
 
-        public DateTime BookingDate { get; set; } = DateTime.Now;
+        [Required, StringLength(20)]
+        public string Status { get; set; } = "Pending";        // Pending | Confirmed | Completed | Cancelled
 
-        [Required]
-        [RegularExpression("Pending|Confirmed|Completed|Cancelled")]
-        public string Status { get; set; }
+        [Required, StringLength(20)]
+        public string PaymentStatus { get; set; } = "Pending";  // Pending | Paid | Refunded
 
-        [ForeignKey("TouristId")]
-        public virtual TouristProfile Tourist { get; set; }
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
-        [ForeignKey("PackageId")]
-        public virtual TourPackage TourPackage { get; set; }
+        // EF-level 1→many; DB enforces one-per-booking via unique index on Feedback.BookingId
+        public virtual ICollection<Feedback> Feedbacks { get; set; } = new List<Feedback>();
     }
+
+
+
+
+
 }

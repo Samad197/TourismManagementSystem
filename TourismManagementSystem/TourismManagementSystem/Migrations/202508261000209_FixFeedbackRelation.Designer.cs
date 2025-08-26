@@ -7,13 +7,13 @@ namespace TourismManagementSystem.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.5.1")]
-    public sealed partial class InitialCreate : IMigrationMetadata
+    public sealed partial class FixFeedbackRelation : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(InitialCreate));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(FixFeedbackRelation));
         
         string IMigrationMetadata.Id
         {
-            get { return "202508210732182_InitialCreate"; }
+            get { return "202508261000209_FixFeedbackRelation"; }
         }
         
         string IMigrationMetadata.Source
