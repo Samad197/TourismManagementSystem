@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data.Entity;
+using System.Data.Entity.Validation;
 using System.Linq;
 using System.Web.Mvc;
 using TourismManagementSystem.Data;
@@ -98,7 +99,7 @@ namespace TourismManagementSystem.Controllers
             var myPackages = db.TourPackages
                                .Where(p => p.AgencyId == myAgencyKey);
 
-            var mySessions = db.TourSessions
+            var mySessions = db.Sessions
                                .Include(s => s.Package)
                                .Where(s => s.Package.AgencyId == myAgencyKey);
 
@@ -129,8 +130,10 @@ namespace TourismManagementSystem.Controllers
                     SessionId = s.SessionId,
                     PackageTitle = s.Package.Title,
                     StartDate = s.StartDate,
-                    // your model uses AvailableSlots; map to VM's Capacity
-                    Capacity = s.AvailableSlots,
+                    EndDate = s.EndDate,
+                    Capacity = s.Capacity,
+
+                    //Booked = s.Bookings.Sum(b => b.Participants)
                     Booked = db.Bookings
                                      .Where(b => b.SessionId == s.SessionId)
                                      .Select(b => (int?)b.Participants)
@@ -138,6 +141,8 @@ namespace TourismManagementSystem.Controllers
                                      .Sum() ?? 0
                 })
                 .ToList();
+
+     
 
             var recentBookings = myBookings
                 .OrderByDescending(b => b.CreatedAt)
@@ -149,6 +154,9 @@ namespace TourismManagementSystem.Controllers
                     StartDate = b.Session.StartDate,
                     Participants = b.Participants,
                     PaymentStatus = b.PaymentStatus,
+                    CustomerName = b.CustomerName,
+                    IsApproved = b.IsApproved,
+
                     Amount = (b.Session.Package.Price * b.Participants)
                 })
                 .ToList();
@@ -185,5 +193,97 @@ namespace TourismManagementSystem.Controllers
 
             return View(vm);
         }
+
+        [HttpGet]
+        public ActionResult Bookings()
+        {
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            var myAgencyKey = me.UserId;
+
+            var bookings = db.Bookings
+                             .Include(b => b.Session)
+                             .Include(b => b.Session.Package)
+                             .Where(b => b.Session.Package.AgencyId == myAgencyKey)
+                             .OrderByDescending(b => b.CreatedAt)
+                             .Select(b => new BookingViewModel
+                             {
+                                 BookingId = b.BookingId,
+                                 PackageTitle = b.Session.Package.Title,
+                                 CustomerName = b.CustomerName,
+                                 StartDate = b.Session.StartDate,
+                                 Participants = b.Participants,
+                                 PaymentStatus = b.PaymentStatus,
+                                 Amount = (b.Session.Package.Price * b.Participants),
+                                 IsApproved = b.IsApproved
+                             })
+                             .ToList();
+
+            return View(bookings);
+        }
+
+        // POST: Agency/ApproveBooking
+        [HttpPost]
+        public ActionResult ApproveBooking(int bookingId)
+        {
+            var booking = db.Bookings
+                            .Include(b => b.Session)
+                            .Include(b => b.Session.Package)
+                            .FirstOrDefault(b => b.BookingId == bookingId);
+
+            if (booking == null) return HttpNotFound();
+
+            var me = GetMe();
+            if (booking.Session.Package.AgencyId != me.UserId)
+                return new HttpStatusCodeResult(403);
+
+            booking.IsApproved = true;
+            booking.Status = "Approved"; // Add this if Status is required
+
+            try
+            {
+                db.SaveChanges();
+                TempData["Success"] = "Booking approved successfully!";
+            }
+            catch (DbEntityValidationException ex)
+            {
+                var errorMessages = ex.EntityValidationErrors
+                                      .SelectMany(e => e.ValidationErrors)
+                                      .Select(e => e.ErrorMessage);
+
+                var fullErrorMessage = string.Join("; ", errorMessages);
+                TempData["Error"] = "Validation failed: " + fullErrorMessage;
+
+                return RedirectToAction("Dashboard");
+            }
+
+            return RedirectToAction("Dashboard");
+        }
+
+
+        [HttpPost]
+        public ActionResult RejectBooking(int bookingId)
+        {
+            var booking = db.Bookings
+                            .Include(b => b.Session)
+                            .Include(b => b.Session.Package)
+                            .FirstOrDefault(b => b.BookingId == bookingId);
+
+            if (booking == null) return HttpNotFound();
+
+            var me = GetMe();
+            if (booking.Session.Package.AgencyId != me.UserId)
+                return new HttpStatusCodeResult(403);
+
+            booking.IsApproved = false;
+            booking.Status = "Cancelled"; // Optional: update status
+            db.SaveChanges();
+
+            TempData["Error"] = "Booking rejected.";
+            return RedirectToAction("Dashboard");
+        }
+
+
     }
 }

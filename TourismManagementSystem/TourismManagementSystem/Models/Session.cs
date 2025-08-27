@@ -1,5 +1,6 @@
 ﻿// Models/Session.cs
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
@@ -30,6 +31,12 @@ namespace TourismManagementSystem.Models
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
+        // Navigation properties
         public virtual TourPackage Package { get; set; }
+
+        // NEW: Add bookings to calculate available seats
+        public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     }
+
+
 }

@@ -1,0 +1,83 @@
+﻿@using TourismManagementSystem.Models.ViewModels
+@model PackageBookingVm
+@{
+    ViewBag.Title = "Book Package - " + Model.PackageTitle;
+}
+<!-- Header Start -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">
+            Book Package
+        </h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action(" Index", "Home" )">Home</a></li>
+            <li class="breadcrumb-item active text-white">Book Package</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
+
+
+
+
+
+
+<!-- Page Heading -->
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+            <div class="text-center py-4 mb-4 rounded" style="background-color: #1E3A8A;">
+           
+                <h2 class="mb-0" style="color: #ffffff;">Book Package: @Model.PackageTitle</h2>
+
+            </div>
+
+            <!-- Booking Form Card -->
+            <div class="card shadow-sm">
+                <div class="card-body p-4">
+                    @using (Html.BeginForm("Book", "PublicPackage", FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+                        @Html.HiddenFor(m => m.PackageId)
+
+                        <div class="mb-3">
+                            @Html.LabelFor(m => m.FullName, new { @class = "form-label" })
+                            @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter your full name" })
+                            @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
+                        </div>
+
+                        <div class="mb-3">
+                            @Html.LabelFor(m => m.Email, new { @class = "form-label" })
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter your email address" })
+                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
+                        </div>
+
+                        <div class="mb-3">
+                            @Html.LabelFor(m => m.Participants, new { @class = "form-label" })
+                            @Html.TextBoxFor(m => m.Participants, new { @class = "form-control", type = "number", min = "1", max = "100" })
+                            @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-danger" })
+                        </div>
+
+                        <div class="mb-4">
+                            @Html.Label("Select Session", new { @class = "form-label" })
+                            @Html.DropDownListFor(m => m.SelectedSessionId, new SelectList(Model.UpcomingSessions, "SessionId", "StartDate"), "Select a session", new { @class = "form-control" })
+                            @Html.ValidationMessageFor(m => m.SelectedSessionId, "", new { @class = "text-danger" })
+                        </div>
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Proceed to Confirm</button>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Optional: smooth shadow and border radius for modern look */
+    .card {
+        border-radius: 0.75rem;
+    }
+</style>
+

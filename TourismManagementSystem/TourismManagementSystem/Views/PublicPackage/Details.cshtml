@@ -1,46 +1,212 @@
-﻿@model TourismManagementSystem.Models.ViewModels.PublicPackageDetailsVm
+﻿@using TourismManagementSystem.Models.ViewModels
+@model PublicPackageDetailsVm
 
 @{
-    ViewBag.Title = "Package Details";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewBag.Title = Model.Title;
 }
 
-<div class="container py-4" style="max-width:900px;">
-    <div class="row">
-        <div class="col-md-7">
-            <h3>@Model.Title</h3>
-            <p class="text-muted">Offered by @Model.OwnerName (@Model.OwnerType)</p>
-            <p>@Model.Description</p>
-            <p><strong>Price:</strong> @Model.Price.ToString("C")</p>
-            <p><strong>Duration:</strong> @Model.DurationDays days</p>
-            <p><strong>Available Dates:</strong> @Model.StartDate.ToString("yyyy-MM-dd") - @Model.EndDate.ToString("yyyy-MM-dd")</p>
+<!-- Header Start -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">Package Detail</h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item active text-white">Package Detail</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
 
-            <a href="@Url.Action(" Book", "PublicPackage" , new { id=Model.PackageId })" class="btn btn-success">
-                Book Now
-            </a>
-        </div>
-        <div class="col-md-5">
-            <img src="@Model.ThumbnailPath" class="img-fluid rounded shadow" alt="@Model.Title" />
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-md-10">
+
+            <!-- Package Card Start -->
+            <div class="card shadow-sm mb-4">
+                <div class="row g-0">
+                    <div class="col-md-5">
+                        <img src="@Model.HeroImagePath" class="img-fluid rounded-start" alt="@Model.Title">
+                    </div>
+                    <div class="col-md-7">
+                        <div class="card-body">
+                            <h2 class="card-title">@Model.Title</h2>
+                            <p class="card-text">@Model.Description</p>
+                            <p class="card-text"><strong>Price:</strong> $@Model.Price</p>
+                            <p class="card-text"><strong>Duration:</strong> @Model.DurationDays days</p>
+                            <p class="card-text"><strong>Owner:</strong> @Model.OwnerName (@Model.OwnerType)</p>
+
+                            @if (Model.AvgRating.HasValue)
+                            {
+                                <p class="card-text"><strong>Average Rating:</strong> @Model.AvgRating.Value.ToString("0.0") / 5</p>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Package Card End -->
+            <!-- Existing Booking Alert -->
+            @if (Model.ExistingBooking != null)
+            {
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <strong>You have already booked this package.</strong>
+                        <br />
+                        Status:
+                        @if (Model.ExistingBooking.Status == "Pending")
+                        {
+                            <span class="badge bg-warning">@Model.ExistingBooking.Status</span>
+                        }
+                        else if (Model.ExistingBooking.Status == "Approved")
+                        {
+                            <span class="badge bg-success">@Model.ExistingBooking.Status</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">@Model.ExistingBooking.Status</span>
+                        }
+
+                        Payment:
+                        @if (Model.ExistingBooking.PaymentStatus == "Paid")
+                        {
+                            <span class="badge bg-success">@Model.ExistingBooking.PaymentStatus</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-warning">@Model.ExistingBooking.PaymentStatus</span>
+                        }
+                    </div>
+                    @*<div>
+                        <a href="@Url.Action("EditBooking", "PublicPackage", new { id = Model.ExistingBooking.BookingId })" class="btn btn-sm btn-warning me-2">Edit</a>
+                        @using (Html.BeginForm("CancelBooking", "PublicPackage", new { id = Model.ExistingBooking.BookingId }, FormMethod.Post, new { onsubmit = "return confirm('Are you sure you want to cancel this booking?');", style = "display:inline" }))
+                        {
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
+                        }
+                        @if (Model.ExistingBooking.PaymentStatus != "Paid")
+                        {
+                            <a href="@Url.Action("Pay", "PublicPackage", new { bookingId = Model.ExistingBooking.BookingId })" class="btn btn-sm btn-primary ms-2">Pay Now</a>
+                        }
+                    </div>*@
+                </div>
+            }
+
+            <!-- Upcoming Sessions -->
+            <div class="card shadow-sm mb-4 p-3">
+                <h3>Upcoming Sessions</h3>
+                @if (Model.UpcomingSessions == null || !Model.UpcomingSessions.Any())
+                {
+                    <p>No upcoming sessions.</p>
+                }
+                else
+                {
+                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                        <table class="table table-striped align-middle">
+                            <thead>
+                                <tr>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Available Seats</th>
+                                    <th class="text-center">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var session in Model.UpcomingSessions)
+                                {
+                                    <tr>
+                                        <td>@session.StartDate.ToString("dd MMM yyyy")</td>
+                                        <td>@session.EndDate.ToString("dd MMM yyyy")</td>
+                                        <td>@(session.Capacity - session.Booked)</td>
+                                        <td class="text-center">
+                                            @if (Model.ExistingBooking != null && Model.ExistingBooking.SessionId == session.SessionId)
+                                            {
+                                                <span class="badge bg-info">Already Booked</span>
+                                            }
+                                            else if ((session.Capacity - session.Booked) > 0)
+                                            {
+                                                <a href="@Url.Action("Book", "PublicPackage", new { packageId = Model.PackageId, sessionId = session.SessionId })" class="btn btn-success btn-sm">Book Now</a>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-danger">Full</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- Reviews -->
+            <div class="card shadow-sm mb-4 p-3">
+                <h3>Reviews</h3>
+                @if (Model.Reviews == null || !Model.Reviews.Any())
+                {
+                    <p>No reviews yet.</p>
+                }
+                else
+                {
+                    foreach (var review in Model.Reviews)
+                    {
+                        <div class="mb-3 border-bottom pb-2">
+                            <p><strong>@review.TouristName</strong>: @review.Rating / 5</p>
+                            <p>@review.Comment</p>
+                        </div>
+                    }
+                }
+            </div>
+
+            <!-- My Bookings -->
+            <div class="card shadow-sm mb-4 p-3">
+                <h3>My Bookings</h3>
+                @if (ViewBag.MyBookings != null && ((List<PackageBookingVm>)ViewBag.MyBookings).Any())
+                {
+                    foreach (var booking in (List<PackageBookingVm>)ViewBag.MyBookings)
+                    {
+                        <div class="mb-3 border-bottom pb-2">
+                            <p><strong>Session:</strong> @booking.SelectedSessionDate.ToString("dd MMM yyyy") - @booking.SelectedSessionEnd.ToString("dd MMM yyyy")</p>
+                            <p><strong>Participants:</strong> @booking.Participants</p>
+
+                            <p>
+                                <strong>Status:</strong>
+                                @if (booking.Status == "Approved")
+                                {
+                                    <span class="badge bg-success">@booking.Status</span>
+                                }
+                                else if (booking.Status == "Rejected")
+                                {
+                                    <span class="badge bg-danger">@booking.Status</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">@booking.Status</span>
+                                }
+                            </p>
+
+                            <p>
+                                <strong>Payment:</strong>
+                                @if (booking.PaymentStatus == "Paid")
+                                {
+                                    <span class="badge bg-success">@booking.PaymentStatus</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Pending by Admin</span>
+                                }
+                            </p>
+
+                         
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p>You have no bookings.</p>
+                }
+            </div>
+
+
         </div>
     </div>
-
-    <hr />
-
-    <h4>Tourist Reviews</h4>
-    @if (Model.Reviews.Any())
-    {
-    <ul class="list-group">
-        @foreach (var r in Model.Reviews)
-        {
-        <li class="list-group-item">
-            <strong>@r.TouristName</strong> rated <span class="text-warning">@r.Rating ★</span>
-            <p>@r.Comment</p>
-        </li>
-        }
-    </ul>
-    }
-    else
-    {
-    <p class="text-muted">No reviews yet. Be the first to review!</p>
-    }
 </div>

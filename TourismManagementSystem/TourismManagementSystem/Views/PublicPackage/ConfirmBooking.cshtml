@@ -1,0 +1,36 @@
+﻿@using TourismManagementSystem.Models.ViewModels
+@model PackageBookingVm
+
+@{
+    ViewBag.Title = "Confirm Booking - " + Model.PackageTitle;
+}
+<!-- Header Start -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">
+            Confirm Booking
+        </h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action(" Index", "Home" )">Home</a></li>
+            <li class="breadcrumb-item active text-white">Confirm Booking</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
+<h2>Confirm Booking: @Model.PackageTitle</h2>
+
+@using (Html.BeginForm("ConfirmBookingPost", "PublicPackage", FormMethod.Post))
+{
+    @Html.AntiForgeryToken()
+    @Html.HiddenFor(m => m.PackageId)
+    @Html.HiddenFor(m => m.SelectedSessionId)
+    @Html.HiddenFor(m => m.Participants)
+
+    <p><strong>Name:</strong> @Model.FullName</p>
+    <p><strong>Email:</strong> @Model.Email</p>
+    <p><strong>Participants:</strong> @Model.Participants</p>
+    <p><strong>Session:</strong> @Model.SelectedSessionDate.ToString("dd MMM yyyy") - @Model.SelectedSessionEnd.ToString("dd MMM yyyy")</p>
+
+    <button type="submit" class="btn btn-success">Confirm Booking</button>
+    <a href="@Url.Action("Book", "PublicPackage", new { packageId = Model.PackageId, sessionId = Model.SelectedSessionId })" class="btn btn-secondary">Back</a>
+}

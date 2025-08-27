@@ -18,6 +18,9 @@ namespace TourismManagementSystem.Models
         //[Column(TypeName = "money")]
         public decimal Price { get; set; }
 
+        public virtual ICollection<Review> Reviews { get; set; }
+
+
         [Range(1, 100)] public int DurationDays { get; set; }
         [Range(1, 1000)] public int MaxGroupSize { get; set; }
 
@@ -31,7 +34,7 @@ namespace TourismManagementSystem.Models
         [ForeignKey("GuideId")] public virtual GuideProfile Guide { get; set; }
 
         public virtual ICollection<TourImages> Images { get; set; }
-        public virtual ICollection<TourSession> Sessions { get; set; }
+        public virtual ICollection<Session> Sessions { get; set; }
 
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     }

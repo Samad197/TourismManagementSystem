@@ -175,20 +175,44 @@
     <Compile Include="Migrations\202508261404458_AddSessionsTable.Designer.cs">
       <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202508270754024_UpdateTourismDb.cs" />
+    <Compile Include="Migrations\202508270754024_UpdateTourismDb.Designer.cs">
+      <DependentUpon>202508270754024_UpdateTourismDb.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508271031076_FixBookingSessionFK.cs" />
+    <Compile Include="Migrations\202508271031076_FixBookingSessionFK.Designer.cs">
+      <DependentUpon>202508271031076_FixBookingSessionFK.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508271037318_FixBookingSessionFK1.cs" />
+    <Compile Include="Migrations\202508271037318_FixBookingSessionFK1.Designer.cs">
+      <DependentUpon>202508271037318_FixBookingSessionFK1.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508271051307_PendingChanges.cs" />
+    <Compile Include="Migrations\202508271051307_PendingChanges.Designer.cs">
+      <DependentUpon>202508271051307_PendingChanges.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.cs" />
+    <Compile Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.Designer.cs">
+      <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AgencyProfile.cs" />
     <Compile Include="Models\Booking.cs" />
     <Compile Include="Models\Feedback.cs" />
     <Compile Include="Models\GuideProfile.cs" />
+    <Compile Include="Models\Review.cs" />
     <Compile Include="Models\Role.cs" />
     <Compile Include="Models\Session.cs" />
     <Compile Include="Models\TourImages.cs" />
+    <Compile Include="Models\Tourist.cs" />
     <Compile Include="Models\TouristProfile.cs" />
     <Compile Include="Models\TourPackage.cs" />
     <Compile Include="Models\TourSession.cs" />
     <Compile Include="Models\User.cs" />
     <Compile Include="Models\ViewModels\AdminViewModels.cs" />
+    <Compile Include="Models\ViewModels\AgencyBookingVm.cs" />
     <Compile Include="Models\ViewModels\AgencyDashboardVm.cs" />
+    <Compile Include="Models\ViewModels\BookingViewModel.cs" />
     <Compile Include="Models\ViewModels\GuideListItemVm.cs" />
     <Compile Include="Models\ViewModels\LoginViewModel.cs" />
     <Compile Include="Models\ViewModels\PackageCreateVm.cs" />
@@ -435,6 +459,12 @@
     <Content Include="Views\PackageSessions\Delete.cshtml" />
     <Content Include="Views\PackageSessions\Edit.cshtml" />
     <Content Include="Views\PackageSessions\Index.cshtml" />
+    <Content Include="Views\Package\Edit.cshtml" />
+    <Content Include="Views\PublicPackage\ConfirmBooking.cshtml" />
+    <Content Include="Views\PublicPackage\EditBooking.cshtml" />
+    <Content Include="Views\PublicPackage\Book.cshtml" />
+    <Content Include="Views\Booking\Book.cshtml" />
+    <Content Include="Views\Agency\Book.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
@@ -488,6 +518,21 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202508261404458_AddSessionsTable.resx">
       <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508270754024_UpdateTourismDb.resx">
+      <DependentUpon>202508270754024_UpdateTourismDb.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508271031076_FixBookingSessionFK.resx">
+      <DependentUpon>202508271031076_FixBookingSessionFK.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508271037318_FixBookingSessionFK1.resx">
+      <DependentUpon>202508271037318_FixBookingSessionFK1.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508271051307_PendingChanges.resx">
+      <DependentUpon>202508271051307_PendingChanges.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.resx">
+      <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

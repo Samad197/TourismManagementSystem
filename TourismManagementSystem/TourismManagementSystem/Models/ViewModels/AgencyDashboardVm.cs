@@ -28,8 +28,11 @@ namespace TourismManagementSystem.Models.ViewModels
         public int SessionId { get; set; }
         public string PackageTitle { get; set; }
         public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
         public int Capacity { get; set; }
         public int Booked { get; set; }
+        // Convenience property
+        public int AvailableSeats => Capacity - Booked;
     }
 
     public class RecentBookingItem
@@ -40,6 +43,10 @@ namespace TourismManagementSystem.Models.ViewModels
         public int Participants { get; set; }
         public string PaymentStatus { get; set; } // Paid/Pending
         public decimal Amount { get; set; }
+        // Add these two properties
+        public string CustomerName { get; set; }
+        public bool? IsApproved { get; set; }
+
     }
 
     public class RecentFeedbackItem

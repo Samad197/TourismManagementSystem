@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using System.Web;
 
 namespace TourismManagementSystem.Models.ViewModels
 {
@@ -23,22 +24,52 @@ namespace TourismManagementSystem.Models.ViewModels
     public class PublicPackageDetailsVm
     {
         public int PackageId { get; set; }
+
+        [Display(Name = "Package Title")]
         public string Title { get; set; }
+
+        [Display(Name = "Description")]
         public string Description { get; set; }
+
+        public Booking ExistingBooking { get; set; } // NEW
+
+        [Display(Name = "Price")]
         public decimal Price { get; set; }
+
+        [Display(Name = "Duration (Days)")]
         public int DurationDays { get; set; }
+
+        [Display(Name = "Max Group Size")]
         public int MaxGroupSize { get; set; }
-        public string OwnerType { get; set; }
+
+        [Display(Name = "Owner Type")]
+        public string OwnerType { get; set; } // Agency or Guide
+
+        [Display(Name = "Owner Name")]
         public string OwnerName { get; set; }
+
+        [Display(Name = "Hero Image")]
         public string HeroImagePath { get; set; }
-        public List<string> Gallery { get; set; }
+
+        public List<string> Gallery { get; set; } // multiple images
+
         public List<UpcomingSessionItem> UpcomingSessions { get; set; }
+
+        public List<ReviewItem> Reviews { get; set; }
+
         public double? AvgRating { get; set; }
 
         public PublicPackageDetailsVm()
         {
             Gallery = new List<string>();
             UpcomingSessions = new List<UpcomingSessionItem>();
+            Reviews = new List<ReviewItem>();
+        }
+        public class ReviewItem
+        {
+            public string TouristName { get; set; }
+            public int Rating { get; set; }
+            public string Comment { get; set; }
         }
     }
 
@@ -53,13 +84,13 @@ namespace TourismManagementSystem.Models.ViewModels
     // Agency: create/edit form
     public class PackageCreateVm
     {
+        public int PackageId { get; set; } // ADD THIS LINE
         [Required, StringLength(100)]
         public string Title { get; set; }
 
-        [DataType(DataType.MultilineText)]
         public string Description { get; set; }
 
-        [Range(0, 999999)]
+        [Range(0, double.MaxValue)]
         public decimal Price { get; set; }
 
         [Range(1, 100)]
@@ -68,12 +99,19 @@ namespace TourismManagementSystem.Models.ViewModels
         [Range(1, 1000)]
         public int MaxGroupSize { get; set; }
 
-        [DataType(DataType.Date)]
         public DateTime? StartDate { get; set; }
-
-        [DataType(DataType.Date)]
         public DateTime? EndDate { get; set; }
+
+        // For image upload
+        public IEnumerable<HttpPostedFileBase> Images { get; set; }
+
+        // For edit view
+        public List<TourImages> ExistingImages { get; set; }
+
+        // For removing images
+        public int[] removeImageIds { get; set; }
     }
+
 
     // Agency: my packages list row
     public class MyPackageListItemVm
@@ -89,12 +127,32 @@ namespace TourismManagementSystem.Models.ViewModels
     public class PackageBookingVm
     {
         public int PackageId { get; set; }
-        [Required] public string FullName { get; set; }
-        [Required, EmailAddress] public string Email { get; set; }
-        [Range(1, 100)] public int Participants { get; set; }
+        public int? BookingId { get; set; } // nullable for new bookings
 
-        // Optional for displaying package title
+        [Required]
+        public string FullName { get; set; }
+
+        [Required, EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [Range(1, 100, ErrorMessage = "Participants must be between 1 and 100")]
+        public int Participants { get; set; } = 1;
+
+        [Required(ErrorMessage = "Please select a session")]
+        public int SelectedSessionId { get; set; }
+
+        // Optional display
         public string PackageTitle { get; set; }
+        public DateTime SelectedSessionDate { get; set; }
+        public DateTime SelectedSessionEnd { get; set; }
+
+        // Added for assignment
+        public string Status { get; set; } = "Pending";        // Booking status (Pending / Approved / Rejected)
+        public string PaymentStatus { get; set; } = "Pending"; // Payment status (Pending / Paid)
+
+        public List<UpcomingSessionItem> UpcomingSessions { get; set; } = new List<UpcomingSessionItem>();
     }
+
 
 }

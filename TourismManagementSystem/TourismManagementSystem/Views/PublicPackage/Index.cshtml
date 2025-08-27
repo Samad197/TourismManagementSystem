@@ -12,12 +12,49 @@
         </h3>
         <ol class="breadcrumb justify-content-center mb-0">
             <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
-            @*<li class="breadcrumb-item"><a href="#">Pages</a></li>*@
             <li class="breadcrumb-item active text-white">Packages</li>
         </ol>
     </div>
 </div>
 <!-- Header End -->
+<!-- Filters Start -->
+<div class="container mt-4">
+    <form method="get" action="@Url.Action("Index", "PublicPackage")">
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <input type="text" name="q" class="form-control" placeholder="Search by title or description" value="@ViewBag.Q" />
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="minPrice" class="form-control" placeholder="Min Price" value="@Request.QueryString["minPrice"]" />
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="maxPrice" class="form-control" placeholder="Max Price" value="@Request.QueryString["maxPrice"]" />
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="minDays" class="form-control" placeholder="Min Duration" value="@Request.QueryString["minDays"]" />
+            </div>
+            <div class="col-md-2">
+                <input type="number" name="maxDays" class="form-control" placeholder="Max Duration" value="@Request.QueryString["maxDays"]" />
+            </div>
+        </div>
+
+
+        <div class="form-check">
+            <input type="checkbox" class="form-check-input" id="upcomingOnly" name="upcomingOnly"
+                   @if (ViewBag.UpcomingOnly != null && ViewBag.UpcomingOnly == true) { @: checked
+                   } />
+
+            <label class="form-check-label" for="upcomingOnly">Only Upcoming Packages</label>
+        </div>
+
+
+
+        <button type="submit" class="btn btn-primary mt-3">Filter</button>
+    </form>
+</div>
+<!-- Filters End -->
+
+<!-- Display Packages Start -->
 <div class="container mt-4">
     <h2 class="mb-4">Available Travel Packages</h2>
 
@@ -41,14 +78,6 @@
                                 <strong>Max Group:</strong> @pkg.MaxGroupSize <br />
                                 <strong>Owner:</strong> @pkg.OwnerName (@pkg.OwnerType)
                             </p>
-                            @*@if (pkg.AvgRating.HasValue)
-                                {
-                                    <p><strong>Rating:</strong> @pkg.AvgRating.Value.ToString("0.0") ⭐</p>
-                                }
-                                else
-                                {
-                                    <p><em>No reviews yet</em></p>
-                                }*@
 
                             @if (pkg.HasUpcoming)
                             {
@@ -70,3 +99,4 @@
         </div>
     }
 </div>
+<!-- Display Packages End -->

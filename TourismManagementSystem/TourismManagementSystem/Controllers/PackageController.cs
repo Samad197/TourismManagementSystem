@@ -1,6 +1,10 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
+using System.Web;
 using System.Web.Mvc;
 using TourismManagementSystem.Data;
 using TourismManagementSystem.Models;
@@ -12,9 +16,7 @@ namespace TourismManagementSystem.Controllers
     [RoutePrefix("agency/packages")]
     public class PackageController : BaseController
     {
-        // If BaseController doesn't expose db, add there:
-        // protected readonly TourismDbContext db = new TourismDbContext();
-
+        // GET ME
         private User GetMe()
         {
             var email = User?.Identity?.Name;
@@ -26,7 +28,7 @@ namespace TourismManagementSystem.Controllers
                      .FirstOrDefault(u => u.Email == email);
         }
 
-        // GET /agency/packages  (My Packages)
+        // GET /agency/packages
         [HttpGet, Route("")]
         public ActionResult Index()
         {
@@ -36,32 +38,25 @@ namespace TourismManagementSystem.Controllers
             ViewBag.ActivePage = "Packages";
             ViewBag.ActivePageGroup = "Agency";
 
-            // Require profile first
-            if (me.AgencyProfile == null)
-                return RedirectToAction("Profile", "Agency");
-
-            // Not approved -> show your pending screen (you already have this view)
-            if (!me.IsApproved)
-                return View("~/Views/Agency/NotApproved.cshtml", model: me.AgencyProfile);
-
-            var myKey = me.UserId; // Shared PK pattern: AgencyProfile PK == UserId
+            if (me.AgencyProfile == null) return RedirectToAction("Profile", "Agency");
+            if (!me.IsApproved) return View("~/Views/Agency/NotApproved.cshtml", me.AgencyProfile);
 
             var items = db.TourPackages
-                .Where(p => p.AgencyId == myKey)
-                .Select(p => new MyPackageListItemVm
-                {
-                    PackageId = p.PackageId,
-                    Title = p.Title,
-                    Price = p.Price,
-                    DurationDays = p.DurationDays,
-                    MaxGroupSize = p.MaxGroupSize,
-                    CreatedAt = p.CreatedAt,
-                    SessionsCount = p.Sessions.Count()
-                })
-                .OrderByDescending(x => x.CreatedAt)
-                .ToList();
+                          .Where(p => p.AgencyId == me.UserId)
+                          .Select(p => new MyPackageListItemVm
+                          {
+                              PackageId = p.PackageId,
+                              Title = p.Title,
+                              Price = p.Price,
+                              DurationDays = p.DurationDays,
+                              MaxGroupSize = p.MaxGroupSize,
+                              CreatedAt = p.CreatedAt,
+                              SessionsCount = p.Sessions.Count()
+                          })
+                          .OrderByDescending(x => x.CreatedAt)
+                          .ToList();
 
-            return View(items); // Views/Package/Index.cshtml (your “My Packages” table)
+            return View(items);
         }
 
         // GET /agency/packages/create
@@ -70,14 +65,11 @@ namespace TourismManagementSystem.Controllers
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
+            if (me.AgencyProfile == null) return RedirectToAction("Profile", "Agency");
 
             ViewBag.ActivePage = "CreatePackage";
             ViewBag.ActivePageGroup = "Agency";
 
-            if (me.AgencyProfile == null)
-                return RedirectToAction("Profile", "Agency");
-
-            // Agencies can create drafts before approval; public side filters by owner approval
             return View(new PackageCreateVm { DurationDays = 1, MaxGroupSize = 10 });
         }
 
@@ -87,11 +79,6 @@ namespace TourismManagementSystem.Controllers
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
-            if (me.AgencyProfile == null) return RedirectToAction("Profile", "Agency");
-
-            ViewBag.ActivePage = "CreatePackage";
-            ViewBag.ActivePageGroup = "Agency";
-
             if (!ModelState.IsValid) return View(vm);
 
             var pkg = new TourPackage
@@ -103,13 +90,15 @@ namespace TourismManagementSystem.Controllers
                 MaxGroupSize = vm.MaxGroupSize,
                 StartDate = vm.StartDate,
                 EndDate = vm.EndDate,
-                AgencyId = me.UserId,     // Owner = this agency user
-                GuideId = null,
+                AgencyId = me.UserId,
                 CreatedAt = DateTime.UtcNow
             };
 
             db.TourPackages.Add(pkg);
             db.SaveChanges();
+
+            // Save uploaded images
+            SaveImages(vm.Images, pkg.PackageId);
 
             TempData["Success"] = "Package created. You can now add sessions (dates) and images.";
             return RedirectToAction("Index");
@@ -122,35 +111,40 @@ namespace TourismManagementSystem.Controllers
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
 
-            ViewBag.ActivePage = "MyPackages";
-            ViewBag.ActivePageGroup = "Agency";
+            var pkg = db.TourPackages
+                        .Include(p => p.Images)
+                        .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
 
-            var pkg = db.TourPackages.FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
             if (pkg == null) return HttpNotFound();
 
             var vm = new PackageCreateVm
             {
+                PackageId = pkg.PackageId,
                 Title = pkg.Title,
                 Description = pkg.Description,
                 Price = pkg.Price,
                 DurationDays = pkg.DurationDays,
                 MaxGroupSize = pkg.MaxGroupSize,
                 StartDate = pkg.StartDate,
-                EndDate = pkg.EndDate
+                EndDate = pkg.EndDate,
+                ExistingImages = pkg.Images.ToList()
             };
 
-            return View(vm); // reuse Create.cshtml or make a dedicated Edit.cshtml
+            return View(vm);
         }
 
         // POST /agency/packages/{id}/edit
         [HttpPost, ValidateAntiForgeryToken, Route("{id:int}/edit")]
-        public ActionResult Edit(int id, PackageCreateVm vm)
+        public ActionResult Edit(int id, PackageCreateVm vm, int[] removeImageIds)
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
             if (!ModelState.IsValid) return View(vm);
 
-            var pkg = db.TourPackages.FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
+            var pkg = db.TourPackages
+                        .Include(p => p.Images)
+                        .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
+
             if (pkg == null) return HttpNotFound();
 
             pkg.Title = vm.Title?.Trim();
@@ -161,12 +155,27 @@ namespace TourismManagementSystem.Controllers
             pkg.StartDate = vm.StartDate;
             pkg.EndDate = vm.EndDate;
 
+            // Remove selected images
+            if (removeImageIds != null && removeImageIds.Length > 0)
+            {
+                var imagesToRemove = pkg.Images.Where(i => removeImageIds.Contains(i.ImageId)).ToList();
+                foreach (var img in imagesToRemove)
+                {
+                    var fullPath = Server.MapPath(img.ImagePath);
+                    if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+                    db.TourImages.Remove(img);
+                }
+            }
+
+            // Upload new images
+            SaveImages(vm.Images, pkg.PackageId);
+
             db.SaveChanges();
-            TempData["Success"] = "Package updated.";
+            TempData["Success"] = "Package updated successfully.";
             return RedirectToAction("Index");
         }
 
-        // POST /agency/packages/{id}/delete
+        // DELETE
         [HttpPost, ValidateAntiForgeryToken, Route("{id:int}/delete")]
         public ActionResult Delete(int id)
         {
@@ -175,15 +184,23 @@ namespace TourismManagementSystem.Controllers
 
             var pkg = db.TourPackages
                         .Include(p => p.Sessions.Select(s => s.Bookings))
+                        .Include(p => p.Images)
                         .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
             if (pkg == null) return HttpNotFound();
 
-            // (Optional) block delete if there are bookings
-            bool hasBookings = pkg.Sessions.Any(s => s.Bookings.Any());
-            if (hasBookings)
+            // Block if bookings exist
+            if (pkg.Sessions.Any(s => s.Bookings.Any()))
             {
                 TempData["Error"] = "Cannot delete a package that has bookings.";
                 return RedirectToAction("Index");
+            }
+
+            // Delete images from server
+            foreach (var img in pkg.Images.ToList())
+            {
+                var fullPath = Server.MapPath(img.ImagePath);
+                if (System.IO.File.Exists(fullPath)) System.IO.File.Delete(fullPath);
+                db.TourImages.Remove(img);
             }
 
             db.TourPackages.Remove(pkg);
@@ -191,5 +208,33 @@ namespace TourismManagementSystem.Controllers
             TempData["Success"] = "Package deleted.";
             return RedirectToAction("Index");
         }
+
+        // IMAGE UPLOAD HELPER
+        private void SaveImages(IEnumerable<HttpPostedFileBase> images, int packageId)
+        {
+            if (images == null || !images.Any()) return;
+
+            var uploadsFolder = Server.MapPath("~/images/packages/");
+            if (!Directory.Exists(uploadsFolder))
+                Directory.CreateDirectory(uploadsFolder);
+
+            foreach (var image in images)
+            {
+                if (image != null && image.ContentLength > 0)
+                {
+                    var uniqueFileName = Guid.NewGuid() + Path.GetExtension(image.FileName);
+                    var filePath = Path.Combine(uploadsFolder, uniqueFileName);
+                    image.SaveAs(filePath);
+
+                    var tourImage = new TourImages
+                    {
+                        PackageId = packageId,
+                        ImagePath = "/images/packages/" + uniqueFileName
+                    };
+                    db.TourImages.Add(tourImage);
+                }
+            }
+        }
+
     }
 }

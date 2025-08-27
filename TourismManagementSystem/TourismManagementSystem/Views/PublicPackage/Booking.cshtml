@@ -4,7 +4,19 @@
     ViewBag.Title = "Book Package";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
-
+<!-- Header Start -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">
+            Packages Booking
+        </h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item active text-white">Packages Booking</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
 <div class="container py-4" style="max-width:700px;">
     <h3 class="mb-3">Book @Model.PackageTitle</h3>
 
