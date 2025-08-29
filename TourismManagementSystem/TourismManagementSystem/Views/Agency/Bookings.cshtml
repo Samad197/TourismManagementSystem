@@ -1,0 +1,244 @@
+﻿@model List<TourismManagementSystem.Models.ViewModels.BookingViewModel>
+
+@{
+    ViewBag.Title = "Agency Bookings";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">Agency Bookings</h3>
+        <p class="text-white-50 mb-0">Manage your customer bookings</p>
+    </div>
+</div>
+<form id="afTokenHolder" style="display:none;">
+    @Html.AntiForgeryToken()
+</form>
+
+<div class="container py-4">
+    <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle js-bookings">
+            <thead class="table-light">
+                <tr>
+                    <th>Booking ID</th>
+                    <th>Customer</th>
+                    <th>Package</th>
+                    <th>Date</th>
+                    <th class="text-center">Participants</th>
+                    <th class="approval-col">Approval</th>
+                    <th>Payment</th>
+                    <th class="text-center">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var b in Model)
+                {
+                    var ps = string.IsNullOrWhiteSpace(b.PaymentStatus) ? "Pending" : b.PaymentStatus;
+
+                    <tr>
+                        <td>@b.BookingId</td>
+                        <td>@b.CustomerName</td>
+                        <td>@b.PackageTitle</td>
+                        <td>@b.StartDate.ToString("dd MMM yyyy")</td>
+                        <td class="text-center">@b.Participants</td>
+
+                        <!-- Approval -->
+                        <td class="approval-col">
+                            @if (b.IsApproved == null)
+                            {<span class="badge bg-warning text-dark">Pending</span>}
+                            else if (b.IsApproved == true)
+                            {<span class="badge bg-success">Approved</span>}
+                            else
+                            {<span class="badge bg-danger">Rejected</span>}
+                        </td>
+
+                        <!-- Payment -->
+                        <td>
+                            <span class="badge payment-badge @(ps.Equals("Paid", StringComparison.OrdinalIgnoreCase) ? "bg-success"
+                                        : ps.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "bg-secondary"
+                                        : "bg-warning text-dark")"
+                                  data-bookingid="@b.BookingId">
+                                @ps
+                            </span>
+                        </td>
+
+                        <!-- Actions -->
+                        <td class="text-center">
+                            <div class="d-inline-flex gap-2 flex-wrap justify-content-center">
+                                @if (b.IsApproved == null)
+                                {
+                                    <!-- Approve button -->
+                                    <button type="button" class="btn btn-success btn-sm approve-btn"
+                                            data-bookingid="@b.BookingId">
+                                        <i class="fas fa-check me-1"></i> Approve
+                                    </button>
+
+                                    <!-- Reject button -->
+                                    <button type="button" class="btn btn-outline-danger btn-sm reject-btn"
+                                            data-bookingid="@b.BookingId">
+                                        <i class="fas fa-times me-1"></i> Reject
+                                    </button>
+                                }
+                                else if (b.IsApproved == true)
+                                {
+                                    if (!ps.Equals("Paid", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        <button type="button"
+                                                class="btn btn-success btn-sm payment-toggle-btn"
+                                                data-bookingid="@b.BookingId" data-current="@ps">
+                                            <i class="fas fa-check-circle me-1"></i> Mark as Paid
+                                        </button>
+                                    }
+                                    else
+                                    {
+                                        <button type="button"
+                                                class="btn btn-outline-secondary btn-sm payment-toggle-btn"
+                                                data-bookingid="@b.BookingId" data-current="@ps">
+                                            <i class="far fa-clock me-1"></i> Set Pending
+                                        </button>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="text-muted small">No actions</span>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(function () {
+            $('.js-bookings').DataTable({
+                pageLength: 10,
+                lengthMenu: [5, 10, 20, 50],
+                ordering: true,
+                responsive: true,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ bookings",
+                    info: "Showing _START_ to _END_ of _TOTAL_ bookings"
+                }
+            });
+        });
+
+        (function () {
+            function getAfToken() {
+                var el = document.querySelector('input[name="__RequestVerificationToken"]');
+                return el ? el.value : '';
+            }
+
+            async function toggleBooking(btn, actionUrl, type) {
+                const bookingId = btn.getAttribute('data-bookingid');
+                const row = btn.closest('tr');
+                if (!row) return;
+
+                const originalHTML = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Updating…';
+
+                try {
+                    const body = new URLSearchParams({
+                        bookingId: bookingId,
+                        __RequestVerificationToken: getAfToken()
+                    }).toString();
+
+                    const res = await fetch(actionUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body
+                    });
+
+                    const data = await res.json();
+                    if (!data.ok) { alert(data.error || 'Update failed.'); return; }
+
+                    // Approval toggle
+                    if (type === "approval") {
+                        const approvalCell = row.querySelector('.approval-col');
+                        if (approvalCell) {
+                            approvalCell.innerHTML =
+                                data.status === "Approved"
+                                    ? '<span class="badge bg-success">Approved</span>'
+                                    : '<span class="badge bg-danger">Rejected</span>';
+                        }
+                        const actionsCell = row.querySelector('td:last-child');
+                        if (actionsCell) {
+                            if (data.status === "Approved") {
+                                actionsCell.innerHTML = `
+                                  <button type="button"
+                                          class="btn btn-success btn-sm payment-toggle-btn"
+                                          data-bookingid="${bookingId}" data-current="Pending">
+                                    <i class="fas fa-check-circle me-1"></i> Mark as Paid
+                                  </button>`;
+                            } else {
+                                actionsCell.innerHTML = '<span class="text-muted small">No actions</span>';
+                            }
+                        }
+                    }
+
+                    // Payment toggle
+                    if (type === "payment") {
+                        const badge = row.querySelector('.payment-badge[data-bookingid="' + bookingId + '"]');
+                        const newStatus = (data.status || 'Pending').trim();
+
+                        if (badge) {
+                            badge.textContent = newStatus;
+                            badge.setAttribute('data-status', newStatus);
+                            badge.className = 'badge payment-badge ' + (newStatus === "Paid" ? "bg-success" : "bg-secondary");
+                        }
+
+                        if (newStatus === 'Paid') {
+                            btn.className = 'btn btn-outline-secondary btn-sm payment-toggle-btn';
+                            btn.innerHTML = '<i class="far fa-clock me-1"></i> Set Pending';
+                        } else {
+                            btn.className = 'btn btn-success btn-sm payment-toggle-btn';
+                            btn.innerHTML = '<i class="fas fa-check-circle me-1"></i> Mark as Paid';
+                        }
+                    }
+
+                } catch (err) {
+                    console.error(err);
+                    alert('Network error.');
+                } finally {
+                    btn.disabled = false;
+                    if (!btn.innerHTML || btn.innerHTML.indexOf('Updating') !== -1) {
+                        btn.innerHTML = originalHTML;
+                    }
+                }
+            }
+
+            document.addEventListener('click', function (e) {
+                const approveBtn = e.target.closest('.approve-btn');
+                const rejectBtn = e.target.closest('.reject-btn');
+                const payBtn = e.target.closest('.payment-toggle-btn');
+
+                if (approveBtn) {
+                    e.preventDefault();
+                    toggleBooking(approveBtn, '@Url.Action("ApproveBooking","Agency")', "approval");
+                }
+                if (rejectBtn) {
+                    e.preventDefault();
+                    toggleBooking(rejectBtn, '@Url.Action("RejectBooking","Agency")', "approval");
+                }
+                if (payBtn) {
+                    e.preventDefault();
+                    toggleBooking(payBtn, '@Url.Action("TogglePayment","Agency")', "payment");
+                }
+            });
+        })();
+    </script>
+}

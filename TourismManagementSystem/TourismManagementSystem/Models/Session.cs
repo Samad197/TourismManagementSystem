@@ -6,7 +6,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace TourismManagementSystem.Models
 {
-    public class Session
+    public class Session : IValidatableObject
     {
         [Key]
         public int SessionId { get; set; }
@@ -36,6 +36,12 @@ namespace TourismManagementSystem.Models
 
         // NEW: Add bookings to calculate available seats
         public virtual ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+
+        public IEnumerable<ValidationResult> Validate(ValidationContext context)
+        {
+            if (EndDate < StartDate)
+                yield return new ValidationResult("End Date must be on or after Start Date.", new[] { nameof(EndDate) });
+        }
     }
 
 

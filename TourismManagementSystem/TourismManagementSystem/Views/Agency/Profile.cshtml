@@ -2,42 +2,157 @@
 @{
     ViewBag.Title = "Agency Profile";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    bool isApproved = ViewBag.IsApproved is bool b && b;
+
+    bool hasName = !string.IsNullOrWhiteSpace(Model?.AgencyName);
+    bool hasDesc = !string.IsNullOrWhiteSpace(Model?.Description);
+    bool hasPhone = !string.IsNullOrWhiteSpace(Model?.Phone);
+    bool hasDoc = !string.IsNullOrWhiteSpace(Model?.VerificationDocPath);
+    int totalReq = 4; int filled = (hasName ? 1 : 0) + (hasDesc ? 1 : 0) + (hasPhone ? 1 : 0) + (hasDoc ? 1 : 0);
+    int pct = (int)Math.Round(totalReq == 0 ? 0 : (filled * 100.0 / totalReq));
+
+    // If the profile is still pending and AgencyName == Owner FullName (the temp default),
+    // show the AgencyName textbox empty to encourage entering the real business name.
+ 
+    bool blankAgency = !isApproved
+                       && !string.IsNullOrWhiteSpace(Model?.User?.FullName)
+                       && string.Equals(Model?.AgencyName, Model?.User?.FullName, StringComparison.OrdinalIgnoreCase);
 }
+<!-- Header -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">Agency Profile</h3>
+        <p class="text-white-50 mb-0">
+            Welcome, @(string.IsNullOrWhiteSpace(Model?.AgencyName) ? "New Agency" : Model.AgencyName)
+        </p>
+    </div>
+</div>
 
 <div class="container py-4" style="max-width:900px;">
-    <h3 class="mb-3">Agency Profile</h3>
-    @using (Html.BeginForm("Profile", "Agency", FormMethod.Post))
+
+    @if (TempData["Success"] != null)
+    {<div class="alert alert-success">@TempData["Success"]</div>}
+    @if (TempData["Info"] != null)
+    {<div class="alert alert-info">@TempData["Info"]</div>}
+    @if (TempData["Error"] != null)
+    {<div class="alert alert-danger">@TempData["Error"]</div>}
+
+    <div class="card shadow-sm rounded-3 mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-wrap align-items-center justify-content-between">
+                <div class="mb-2">
+                    <h5 class="mb-1">Account Status</h5>
+                    @if (isApproved)
+                    {<span class="badge bg-success">Approved</span> <small class="text-muted ms-2">You can publish & accept bookings.</small> }
+                    else
+                    { <span class="badge bg-warning text-dark">Pending Approval</span> <small class="text-muted ms-2">Complete profile and await admin review.</small>}
+                </div>
+                <div class="mb-2 text-end">
+                    <div class="small text-muted">Profile completeness: @pct%</div>
+                    <div class="progress" style="height:8px; width:220px;">
+                        <div class="progress-bar" role="progressbar" style="width:@pct%;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-3">
+                <div class="col-md-6">
+                    <ul class="list-unstyled mb-0">
+                        <li class="mb-1">
+                            <i class="@(hasName ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                            Agency Name
+                        </li>
+                        <li class="mb-1">
+                            <i class="@(hasDesc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                            Description
+                        </li>
+                        <li class="mb-1">
+                            <i class="@(hasPhone ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                            Phone
+                        </li>
+                        <li class="mb-1">
+                            <i class="@(hasDoc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                            Verification Document
+                        </li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    @if (!isApproved)
+                    {<div class="alert alert-info mb-0">You may preview public packages; publishing & bookings unlock after approval.</div> }
+                    else
+                    { <div class="alert alert-success mb-0">Approved—publish packages, open sessions, and accept bookings.</div>}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <h4 class="mb-3">Profile</h4>
+
+    @using (Html.BeginForm("Profile", "Agency", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
     {
         @Html.AntiForgeryToken()
-        @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+        @Html.ValidationSummary(true, "", new { @class = "text-danger mb-3" })
+
+<div class="row">
+    <div class="col-md-6 mb-3">
+        @* Owner / Contact person (from User.FullName) *@
+        <label class="form-label fw-semibold">Owner / Contact Person</label>
+        <input class="form-control" value="@(Model?.User?.FullName ?? "")" readonly />
+        <small class="text-muted">Change this in Account Settings if needed.</small>
+    </div>
+    <div class="col-md-6 mb-3">
+        @Html.LabelFor(m => m.AgencyName, new { @class = "form-label fw-semibold" })
+        @Html.TextBoxFor(
+            m => m.AgencyName,
+            new
+                 {
+                @class = "form-control",
+                placeholder = "e.g., WanderMore Travels",
+                // Force empty display if it's still the temp default (but don't change DB)
+                @Value = blankAgency ? "" : Model?.AgencyName
+            })
+        @Html.ValidationMessageFor(m => m.AgencyName, "", new { @class = "text-danger" })
+        <small class="text-muted">Your public business/brand name.</small>
+    </div>
+</div>
 
         <div class="mb-3">
-            @Html.LabelFor(m => m.AgencyName)
-            @Html.TextBoxFor(m => m.AgencyName, new { @class = "form-control" })
-            @Html.ValidationMessageFor(m => m.AgencyName)
+            @Html.LabelFor(m => m.Description, new { @class = "form-label fw-semibold" })
+            @Html.TextAreaFor(m => m.Description, 5, 60, new { @class = "form-control", placeholder = "Describe services, specialties, destinations..." })
+            @Html.ValidationMessageFor(m => m.Description, "", new { @class = "text-danger" })
+        </div>
+
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                @Html.LabelFor(m => m.Phone, new { @class = "form-label fw-semibold" })
+                @Html.TextBoxFor(m => m.Phone, new { @class = "form-control", placeholder = "+92 3XX XXX XXXX", pattern = @"^\+?\d[\d\s\-]{6,}$", title = "Enter a valid phone number" })
+                @Html.ValidationMessageFor(m => m.Phone, "", new { @class = "text-danger" })
+            </div>
+            <div class="col-md-6 mb-3">
+                @Html.LabelFor(m => m.Website, new { @class = "form-label fw-semibold" })
+                @Html.TextBoxFor(m => m.Website, new { @class = "form-control", placeholder = "https://example.com", type = "url" })
+                @Html.ValidationMessageFor(m => m.Website, "", new { @class = "text-danger" })
+                <small class="text-muted">Optional but recommended.</small>
+            </div>
         </div>
 
         <div class="mb-3">
-            @Html.LabelFor(m => m.Description)
-            @Html.TextAreaFor(m => m.Description, 5, 60, new { @class = "form-control" })
+            @Html.Label("VerificationDocPath", "Verification Document URL", new { @class = "form-label fw-semibold" })
+            @Html.TextBoxFor(m => m.VerificationDocPath, new { @class = "form-control", placeholder = "Link to your license/registration (PDF/image URL)" })
+            @Html.ValidationMessageFor(m => m.VerificationDocPath, "", new { @class = "text-danger" })
         </div>
 
-        <div class="mb-3">
-            @Html.LabelFor(m => m.Phone)
-            @Html.TextBoxFor(m => m.Phone, new { @class = "form-control" })
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary" type="submit">
+                <i class="fas fa-save me-1"></i> Save Profile
+            </button>
+            <a class="btn btn-outline-secondary" href="@Url.Action("Dashboard","Agency")">
+                <i class="fas fa-tachometer-alt me-1"></i> Back to Dashboard
+            </a>
+            <a href="@Url.Action("Index","PublicPackage", new { preview = 1 })" class="btn btn-light">
+                <i class="fas fa-search me-1"></i> Preview Public Packages
+            </a>
         </div>
-
-        <div class="mb-3">
-            @Html.LabelFor(m => m.Website)
-            @Html.TextBoxFor(m => m.Website, new { @class = "form-control" })
-        </div>
-
-        <div class="mb-3">
-            @Html.Label("VerificationDocPath", "Verification Document (URL or path)")
-            @Html.TextBoxFor(m => m.VerificationDocPath, new { @class = "form-control" })
-        </div>
-
-        <button class="btn btn-primary" type="submit">Save Profile</button>
-        <a class="btn btn-outline-secondary" href="@Url.Action("Dashboard","Agency")">Back to Dashboard</a>
     }
 </div>

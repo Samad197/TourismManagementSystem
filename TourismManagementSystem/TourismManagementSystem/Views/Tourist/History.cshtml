@@ -1,0 +1,83 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.TouristBookingRowVm>
+@{
+    ViewBag.Title = "History";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">Booking History</h3>
+        <p class="text-white-50 mb-0">Completed bookings & your reviews</p>
+    </div>
+</div>
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {<div class="alert alert-success">@TempData["Success"]</div>}
+    @if (TempData["Error"] != null)
+    {<div class="alert alert-danger">@TempData["Error"]</div>}
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">No completed bookings yet.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Package</th>
+                        <th>Start</th>
+                        <th>Pax</th>
+                        <th>Approval</th>
+                        <th>Review</th>
+                        <th>Amount</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in Model)
+                    {
+                        <tr>
+                            <td>@b.PackageTitle</td>
+                            <td>@b.StartDate.ToString("yyyy-MM-dd")</td>
+                            <td>@b.Participants</td>
+                            <td>
+                                @if (b.IsApproved == true)
+                                {<span class="badge bg-success">Approved</span> }
+                                else if (b.IsApproved == false)
+                                { <span class="badge bg-danger">Rejected</span> }
+                                else
+                                { <span class="badge bg-warning text-dark">Pending</span>}
+                            </td>
+                            <td>
+                                @if (b.ExistingFeedbackId.HasValue)
+                                {
+                                    <span class="badge bg-info text-dark">Submitted</span>
+                                }
+                                else if (b.CanReview)
+                                {
+                                    <a class="btn btn-sm btn-primary"
+                                       href="@Url.Action("CreateReview","Tourist", new { bookingId = b.BookingId })">
+                                        Leave Review
+                                    </a>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>@(b.Amount?.ToString("C") ?? "-")</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="@Url.Action("Details","PublicPackage", new { id = b.PackageId })">
+                                    View Package
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

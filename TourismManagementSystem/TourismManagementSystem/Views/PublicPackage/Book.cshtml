@@ -1,78 +1,194 @@
-﻿@using TourismManagementSystem.Models.ViewModels
+﻿@*@using TourismManagementSystem.Models.ViewModels
+    @model PackageBookingVm
+    @{
+        ViewBag.Title = "Book Package - " + Model.PackageTitle;
+
+        // Build nice labels for sessions without changing the model/controller
+        var sessionItems = (Model.UpcomingSessions ?? Enumerable.Empty<dynamic>())
+            .Select(s => new SelectListItem
+            {
+                Value = s.SessionId.ToString(),
+                Text = (s.StartDate is DateTime dt) ? dt.ToString("MMM dd, yyyy • HH:mm") : s.StartDate.ToString()
+            })
+            .ToList();
+    }*@
+
+@using TourismManagementSystem.Models.ViewModels
 @model PackageBookingVm
 @{
     ViewBag.Title = "Book Package - " + Model.PackageTitle;
+
+    bool isAuth = User?.Identity?.IsAuthenticated ?? false;
+    bool isTourist = isAuth && User.IsInRole("Tourist");
+
+    var sessionItems = (Model.UpcomingSessions ?? Enumerable.Empty<dynamic>())
+        .Select(s => new SelectListItem
+        {
+            Value = s.SessionId.ToString(),
+            Text = (s.StartDate is DateTime dt) ? dt.ToString("MMM dd, yyyy • HH:mm") : s.StartDate.ToString()
+        })
+        .ToList();
+
+    // Where to POST:
+    //  - Tourists → /Tourist/Packages/Book (POST)
+    //  - Public/Anonymous → Login (with returnUrl back to this Book page)
+    var bookPostUrl = isTourist
+        ? Url.RouteUrl("TouristPackageBookPost")
+        : Url.Action("Login", "Account", new
+        {
+            returnUrl = Url.RouteUrl("TouristPackageBook", new
+            {
+                packageId = Model.PackageId,
+                sessionId = Model.SelectedSessionId
+            })
+        });
+
+    // Use tourist-friendly URLs for navigation when logged-in as Tourist
+    var packagesUrl = isTourist
+        ? Url.RouteUrl("TouristPackages")
+        : Url.Action("Index", "PublicPackage");
+
+    var detailsUrl = isTourist
+        ? Url.RouteUrl("TouristPackageDetails", new { id = Model.PackageId })
+        : Url.Action("Details", "PublicPackage", new { id = Model.PackageId });
 }
-<!-- Header Start -->
+
+
+
+
+<style>
+    /* ===== Booking section look & feel (move to site.css if you like) ===== */
+    .booking {
+        background: linear-gradient(135deg, #0b1c52 0%, #1e3a8a 60%, #0b1c52 100%);
+        color: #fff;
+    }
+
+    .section-booking-title {
+        display: inline-block;
+        color: #fff;
+        border-left: 4px solid #ffc107;
+        text-transform: uppercase;
+        letter-spacing: .08em;
+        font-weight: 700;
+    }
+
+    .booking .form-floating > label {
+        color: #6c757d;
+    }
+
+    .booking .form-control,
+    .booking .form-select {
+        border: 0;
+        box-shadow: none !important;
+    }
+
+    .booking .card-like {
+        background: rgba(255,255,255,0.08);
+        border-radius: 1rem;
+        padding: 1.25rem;
+    }
+</style>
+
+<!-- Header -->
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width: 900px;">
-        <h3 class="text-white display-3 mb-4">
-            Book Package
-        </h3>
+        <h3 class="text-white display-3 mb-4">Book Package</h3>
         <ol class="breadcrumb justify-content-center mb-0">
-            <li class="breadcrumb-item"><a href="@Url.Action(" Index", "Home" )">Home</a></li>
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item"><a href="@packagesUrl">Packages</a></li>
             <li class="breadcrumb-item active text-white">Book Package</li>
         </ol>
     </div>
 </div>
+
 <!-- Header End -->
+<!-- Tour Booking Start -->
+<div class="container-fluid booking py-5">
+    <div class="container py-5">
+        <div class="row g-5 align-items-center">
+            <!-- Left: intro -->
+            <div class="col-lg-6">
+                <h5 class="section-booking-title pe-3">Booking</h5>
+                <h1 class="text-white mb-4">Online Booking</h1>
+                <p class="text-white-50 mb-4">
+                    You’re booking: <strong>@Model.PackageTitle</strong>.
+                    Fill in your details and pick an upcoming session to continue.
+                </p>
+                <p class="text-white-50 mb-4">
+                    We’ll create a booking request. The provider can approve it and update payment status per assignment rules.
+                </p>
+                @*<a href="@Url.Action("Details","PublicPackage", new { id = Model.PackageId })"
+                       class="btn btn-light text-primary rounded-pill py-3 px-5 mt-2">
+                        Read More
+                    </a>*@
 
-
-
-
-
-
-<!-- Page Heading -->
-<div class="container my-5">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
-            <div class="text-center py-4 mb-4 rounded" style="background-color: #1E3A8A;">
-           
-                <h2 class="mb-0" style="color: #ffffff;">Book Package: @Model.PackageTitle</h2>
+                <!-- Left column "Read More" button -->
+                <a href="@detailsUrl" class="btn btn-light text-primary rounded-pill py-3 px-5 mt-2">
+                    Read More
+                </a>
 
             </div>
 
-            <!-- Booking Form Card -->
-            <div class="card shadow-sm">
-                <div class="card-body p-4">
-                    @using (Html.BeginForm("Book", "PublicPackage", FormMethod.Post))
-                    {
+            <!-- Right: form -->
+            <div class="col-lg-6">
+                <div class="card-like">
+                    <h2 class="text-white mb-3">Book This Tour</h2>
+                    <p class="text-white-50 mb-4">
+                        Please provide accurate contact info. Fields marked with * are required.
+                    </p>
+
+                    <!-- RIGHT COLUMN: the form -->
+                    <form action="@bookPostUrl" method="post">
                         @Html.AntiForgeryToken()
                         @Html.HiddenFor(m => m.PackageId)
 
-                        <div class="mb-3">
-                            @Html.LabelFor(m => m.FullName, new { @class = "form-label" })
-                            @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter your full name" })
-                            @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
-                        </div>
+                        @Html.ValidationSummary(false, "", new { @class = "text-warning mb-3" })
 
-                        <div class="mb-3">
-                            @Html.LabelFor(m => m.Email, new { @class = "form-label" })
-                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter your email address" })
-                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
-                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control bg-white", placeholder = "Your Name" })
+                                    @Html.LabelFor(m => m.FullName, "Your Name")
+                                    @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-warning small" })
+                                </div>
+                            </div>
 
-                        <div class="mb-3">
-                            @Html.LabelFor(m => m.Participants, new { @class = "form-label" })
-                            @Html.TextBoxFor(m => m.Participants, new { @class = "form-control", type = "number", min = "1", max = "100" })
-                            @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-danger" })
-                        </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control bg-white", placeholder = "Your Email", type = "email" })
+                                    @Html.LabelFor(m => m.Email, "Your Email")
+                                    @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-warning small" })
+                                </div>
+                            </div>
 
-                        <div class="mb-4">
-                            @Html.Label("Select Session", new { @class = "form-label" })
-                            @Html.DropDownListFor(m => m.SelectedSessionId, new SelectList(Model.UpcomingSessions, "SessionId", "StartDate"), "Select a session", new { @class = "form-control" })
-                            @Html.ValidationMessageFor(m => m.SelectedSessionId, "", new { @class = "text-danger" })
-                        </div>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.Participants, new { @class = "form-control bg-white", placeholder = "Participants", type = "number", min = "1", max = "100" })
+                                    @Html.LabelFor(m => m.Participants, "Participants")
+                                    @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-warning small" })
+                                </div>
+                            </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-primary btn-lg">Proceed to Confirm</button>
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.DropDownListFor(m => m.SelectedSessionId, sessionItems, "Select a session", new { @class = "form-select bg-white", id = "SelectedSessionId" })
+                                    @Html.LabelFor(m => m.SelectedSessionId, "Select Session")
+                                    @Html.ValidationMessageFor(m => m.SelectedSessionId, "", new { @class = "text-warning small" })
+                                </div>
+                            </div>
+
+                            <div class="col-12">
+                                <button class="btn btn-primary text-white w-100 py-3" type="submit">Book Now</button>
+                            </div>
                         </div>
-                    }
+                    </form>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
+<!-- Tour Booking End -->
 
 <style>
     /* Optional: smooth shadow and border radius for modern look */

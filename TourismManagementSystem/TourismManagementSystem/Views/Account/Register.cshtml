@@ -1,7 +1,59 @@
 ﻿@model TourismManagementSystem.Models.ViewModels.RegisterViewModel
+@using System.Linq
+@using System.Web.Mvc
 @{
     ViewBag.Title = "Register";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Build a safe, public-facing role list (hide Admin)
+    var rawRoles = (IEnumerable<dynamic>)(ViewBag.Roles ?? Enumerable.Empty<dynamic>());
+    var roleItems = new List<SelectListItem>();
+
+    foreach (var r in rawRoles)
+    {
+        string name = (string)r.RoleName;
+
+        // ❗ Razor requires braces – no single-line if
+        if (string.Equals(name, "Admin", System.StringComparison.OrdinalIgnoreCase))
+        {
+            continue;
+        }
+
+        string text = name;
+        if (name == "Agency")
+        {
+            text = "Agency (Travel Agency)";
+        }
+        else if (name == "Guide")
+        {
+            text = "Guide (Tour Guide)";
+        }
+        else if (name == "Tourist")
+        {
+            text = "Tourist (Customer)";
+        }
+
+        roleItems.Add(new SelectListItem
+        {
+            Value = System.Convert.ToString(r.RoleId),
+            Text = text
+        });
+    }
+
+    // Default to Tourist if nothing is selected
+    int selectedId = Model?.RoleId ?? 0;
+    if (selectedId == 0)
+    {
+        var touristItem = roleItems.FirstOrDefault(i => i.Text.StartsWith("Tourist"));
+        if (touristItem != null)
+        {
+            int parsed;
+            if (int.TryParse(touristItem.Value, out parsed))
+            {
+                selectedId = parsed;
+            }
+        }
+    }
 }
 
 <!-- Page Banner -->
@@ -16,14 +68,17 @@
 </div>
 
 <!-- Flash messages -->
-<div class="container mt-4">
-    @if (TempData["Success"] != null)
-    {<div class="alert alert-success">@TempData["Success"]</div>}
-    @if (TempData["Info"] != null)
-    {<div class="alert alert-info">@TempData["Info"]</div>}
-    @if (TempData["Error"] != null)
-    {<div class="alert alert-danger">@TempData["Error"]</div>}
-</div>
+@Html.Partial("_Flash")
+
+<!-- Flash messages -->
+@*<div class="container mt-4">
+        @if (TempData["Success"] != null)
+        {<div class="alert alert-success">@TempData["Success"]</div>}
+        @if (TempData["Info"] != null)
+        {<div class="alert alert-info">@TempData["Info"]</div>}
+        @if (TempData["Error"] != null)
+        {<div class="alert alert-danger">@TempData["Error"]</div>}
+    </div>*@
 
 <!-- Registration Form -->
 <div class="container py-5">
@@ -34,31 +89,30 @@
             @using (Html.BeginForm("Register", "Account", FormMethod.Post, new { autocomplete = "off" }))
             {
                 @Html.AntiForgeryToken()
-
                 @Html.ValidationSummary(true, "", new { @class = "text-danger mb-3" })
 
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.FullName)
-                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter full name", maxlength = "100", autofocus = "autofocus" })
+                    @Html.TextBoxFor(m => m.FullName, new { @class = "form-control", placeholder = "Enter full name", maxlength = "100", autofocus = "autofocus", required = "required" })
                     @Html.ValidationMessageFor(m => m.FullName, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.Email)
-                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter email", type = "email", autocomplete = "email" })
+                    @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Enter email", type = "email", autocomplete = "email", required = "required" })
                     @Html.ValidationMessageFor(m => m.Email, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.Password)
-                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", placeholder = "Enter password", autocomplete = "new-password" })
+                    @Html.PasswordFor(m => m.Password, new { @class = "form-control", placeholder = "Enter password", autocomplete = "new-password", required = "required", minlength = "6" })
                     <span class="text-muted small">Minimum 6 characters</span>
                     @Html.ValidationMessageFor(m => m.Password, "", new { @class = "text-danger" })
                 </div>
 
                 <div class="form-group mb-3">
                     @Html.LabelFor(m => m.ConfirmPassword, "Confirm Password")
-                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Re-enter password", autocomplete = "new-password" })
+                    @Html.PasswordFor(m => m.ConfirmPassword, new { @class = "form-control", placeholder = "Re-enter password", autocomplete = "new-password", required = "required", minlength = "6" })
                     @Html.ValidationMessageFor(m => m.ConfirmPassword, "", new { @class = "text-danger" })
                 </div>
 
@@ -66,17 +120,15 @@
                     @Html.LabelFor(m => m.RoleId, "Role")
                     @Html.DropDownListFor(
                         m => m.RoleId,
-                        new SelectList(ViewBag.Roles, "RoleId", "RoleName"),
+                        new SelectList(roleItems, "Value", "Text", selectedId),
                         "-- Select Role --",
-                        new { @class = "form-control", id = "RoleId" }
+                        new { @class = "form-control", id = "RoleId", required = "required" }
                     )
                     @Html.ValidationMessageFor(m => m.RoleId, "", new { @class = "text-danger" })
                 </div>
 
-                <div id="roleHint" class="alert alert-info py-2 px-3 small d-none mb-3">
-                    Travel Agencies and Tour Guides can self-register but must be approved by Admin before publishing tours.
-                    You’ll be redirected to complete your profile after registering.
-                </div>
+                <!-- Dynamic role hint -->
+                <div id="roleHint" class="alert py-2 px-3 small d-none mb-3"></div>
 
                 <button type="submit" class="btn btn-primary w-100 py-2">Register</button>
 
@@ -91,19 +143,34 @@
 @section scripts{
     <script>
         (function () {
-            function toggleHint() {
-                var sel = document.getElementById('RoleId');
-                if (!sel) return;
-                var text = (sel.options[sel.selectedIndex] || {}).text || "";
-                var isPartner = /TravelAgency|TourGuide/i.test(text);
-                var hint = document.getElementById('roleHint');
-                if (hint) {
-                    if (isPartner) hint.classList.remove('d-none');
-                    else hint.classList.add('d-none');
+            const sel = document.getElementById('RoleId');
+            const hint = document.getElementById('roleHint');
+
+            function updateHint() {
+                if (!sel || !hint) return;
+                const text = (sel.options[sel.selectedIndex] || {}).text || "";
+                const isAgency = /(^|\s)Agency/i.test(text);
+                const isGuide = /(^|\s)Guide/i.test(text);
+                const isTourist = /^Tourist/i.test(text);
+
+                if (isAgency || isGuide) {
+                    hint.classList.remove('d-none', 'alert-success', 'alert-warning');
+                    hint.classList.add('alert-info');
+                    hint.innerHTML =
+                        '<strong>Heads up:</strong> Agency and Guide accounts require <strong>Admin approval</strong> before you can publish tours or accept bookings. After registering, you\'ll be redirected to complete your profile.';
+                } else if (isTourist) {
+                    hint.classList.remove('d-none', 'alert-info', 'alert-warning');
+                    hint.classList.add('alert-success');
+                    hint.innerHTML =
+                        '<strong>Good to go:</strong> Tourist accounts get <strong>instant access</strong> to browse and book tours.';
+                } else {
+                    hint.classList.add('d-none');
+                    hint.innerHTML = "";
                 }
             }
-            document.getElementById('RoleId')?.addEventListener('change', toggleHint);
-            toggleHint();
+
+            sel && sel.addEventListener('change', updateHint);
+            updateHint();
         })();
     </script>
 }

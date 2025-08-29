@@ -1,0 +1,68 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.TouristBookingRowVm>
+@{
+    ViewBag.Title = "My Bookings";
+}
+
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">My Bookings</h3>
+        <p class="text-white-50 mb-0">Upcoming & pending bookings</p>
+    </div>
+</div>
+
+<div class="container py-4">
+    @if (TempData["Success"] != null)
+    {<div class="alert alert-success">@TempData["Success"]</div>}
+    @if (TempData["Error"] != null)
+    {<div class="alert alert-danger">@TempData["Error"]</div>}
+
+    @if (!Model.Any())
+    {
+        <div class="alert alert-info">You have no upcoming bookings.</div>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Package</th>
+                        <th>Start</th>
+                        <th>Pax</th>
+                        <th>Status</th>
+                        <th>Payment</th>
+                        <th>Amount</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var b in Model)
+                    {
+                        <tr>
+                            <td>@b.PackageTitle</td>
+                            <td>@b.StartDate.ToString("yyyy-MM-dd HH:mm")</td>
+                            <td>@b.Participants</td>
+                            <td>
+                                @if (b.IsApproved == null)
+                                {<span class="badge bg-warning text-dark">Pending</span> }
+                                else if (b.IsApproved == true)
+                                { <span class="badge bg-success">Approved</span> }
+                                else
+                                { <span class="badge bg-danger">Rejected</span>}
+                            </td>
+                            <td><span class="badge @(b.PaymentStatus=="Paid"?"bg-success":"bg-secondary")">@b.PaymentStatus</span></td>
+                            <td>@(b.Amount?.ToString("C") ?? "-")</td>
+                            <td class="text-end">
+                                <a class="btn btn-sm btn-outline-primary"
+                                   href="@Url.RouteUrl("TouristPackageDetails", new { id = b.PackageId })">
+                                    View Package
+                                </a>
+                            </td>
+
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

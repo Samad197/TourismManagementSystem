@@ -33,6 +33,11 @@ namespace TourismManagementSystem.Models
         [ForeignKey(nameof(RoleId))]
         public virtual Role Role { get; set; }
 
+        [StringLength(30)]
+        public string Phone { get; set; }
+
+        //[StringLength(30)]
+        //public string Phone { get; set; }
         // === NEW / IMPORTANT FOR YOUR FLOW ===
         // Agency/Guide must be approved by Admin; Tourist can be auto-true at registration.
         public bool IsApproved { get; set; } = false;

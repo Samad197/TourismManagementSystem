@@ -1,105 +1,195 @@
-﻿@using TourismManagementSystem.Models.ViewModels
+﻿@*@using TourismManagementSystem.Models.ViewModels
+    @model PublicPackageDetailsVm
+
+    @{
+        ViewBag.Title = Model.Title;
+
+        // Role awareness for booking behavior
+        bool isAuth = User?.Identity?.IsAuthenticated ?? false;
+        bool isTourist = isAuth && User.IsInRole("Tourist");
+        bool isOwnerOrAdmin = isAuth && (User.IsInRole("Agency") || User.IsInRole("Guide") || User.IsInRole("Admin"));
+
+        // URLs
+        var detailsUrl = Url.Action("Details", "PublicPackage", new { id = Model.PackageId });
+        var loginUrl = Url.Action("Login", "Account", new { returnUrl = detailsUrl });
+
+        Func<int, string> bookLoginUrl = (sessionId) => loginUrl; // public users go to login first
+        Func<int, string> bookTouristUrl = (sessionId) => Url.Action("Book", "PublicPackage", new { packageId = Model.PackageId, sessionId = sessionId });
+
+        // Fallback image
+        string hero = string.IsNullOrWhiteSpace(Model.HeroImagePath)
+            ? Url.Content("~/Content/img/packages-1.jpg")
+            : Url.Content(Model.HeroImagePath);
+
+        Func<decimal?, string> money = v => (v ?? 0m).ToString("C");
+
+
+
+
+
+
+        // Use the Tourist route when logged in as Tourist; otherwise go to Login.
+        Func<int, string> bookUrl = sessionId => isTourist
+            ? Url.RouteUrl("TouristPackageBook", new { packageId = Model.PackageId, sessionId })
+            : loginUrl;
+    }*@
+
+
+@using TourismManagementSystem.Models.ViewModels
 @model PublicPackageDetailsVm
 
 @{
     ViewBag.Title = Model.Title;
+
+    bool isAuth = User?.Identity?.IsAuthenticated ?? false;
+    bool isTourist = isAuth && User.IsInRole("Tourist");
+    bool isOwnerOrAdmin = isAuth && (User.IsInRole("Agency") || User.IsInRole("Guide") || User.IsInRole("Admin"));
+
+    // Where the list of packages should link back to
+    var packagesUrl = isTourist
+        ? Url.RouteUrl("TouristPackages")                           // /Tourist/Packages
+        : Url.Action("Index", "PublicPackage");                     // /packages
+
+    // Where the details page says "login" should go
+    var detailsUrl = Url.Action("Details", "PublicPackage", new { id = Model.PackageId });
+    var loginUrl = Url.Action("Login", "Account", new { returnUrl = detailsUrl });
+
+    // Build the Book link:
+    // - public users → login
+    // - tourist      → /Tourist/Packages/Book?packageId=..&sessionId=..
+    Func<int, string> bookUrl = sessionId => isTourist
+        ? Url.RouteUrl("TouristPackageBook", new { packageId = Model.PackageId, sessionId })
+        : loginUrl;
+
+    string hero = string.IsNullOrWhiteSpace(Model.HeroImagePath)
+        ? Url.Content("~/Content/img/packages-1.jpg")
+        : Url.Content(Model.HeroImagePath);
+
+    Func<decimal?, string> money = v => (v ?? 0m).ToString("C");
 }
 
+<!-- Header Start -->
+@*<div class="container-fluid bg-breadcrumb">
+        <div class="container text-center py-5" style="max-width: 900px;">
+            <h3 class="text-white display-3 mb-4">Package Detail</h3>
+            <ol class="breadcrumb justify-content-center mb-0">
+                <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+                <li class="breadcrumb-item"><a href="@Url.Action("Index", "PublicPackage")">Packages</a></li>
+                <li class="breadcrumb-item active text-white">Package Detail</li>
+            </ol>
+        </div>
+    </div>*@
+<!-- Header End -->
 <!-- Header Start -->
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width: 900px;">
         <h3 class="text-white display-3 mb-4">Package Detail</h3>
         <ol class="breadcrumb justify-content-center mb-0">
             <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item"><a href="@packagesUrl">Packages</a></li>
             <li class="breadcrumb-item active text-white">Package Detail</li>
         </ol>
     </div>
 </div>
 <!-- Header End -->
 
+
 <div class="container my-5">
     <div class="row justify-content-center">
         <div class="col-lg-8 col-md-10">
+
+            <!-- Role tip banners -->
+            @if (!isAuth)
+            {
+                <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
+                    <div>
+                        <strong>Want to book this tour?</strong> Please log in or create a Tourist account to continue.
+                    </div>
+                    <div>
+                        <a class="btn btn-sm btn-primary" href="@loginUrl">Login / Register</a>
+                    </div>
+                </div>
+            }
+            else if (isOwnerOrAdmin)
+            {
+                <div class="alert alert-secondary mb-3">
+                    You are logged in as <strong>@(User.IsInRole("Admin") ? "Admin" : (User.IsInRole("Agency") ? "Agency" : "Guide"))</strong>. Booking is available to <strong>Tourist</strong> accounts only.
+                </div>
+            }
 
             <!-- Package Card Start -->
             <div class="card shadow-sm mb-4">
                 <div class="row g-0">
                     <div class="col-md-5">
-                        <img src="@Model.HeroImagePath" class="img-fluid rounded-start" alt="@Model.Title">
+                        <img src="@hero" class="img-fluid rounded-start w-100 h-100" style="object-fit: cover;" alt="@Model.Title">
                     </div>
                     <div class="col-md-7">
                         <div class="card-body">
                             <h2 class="card-title">@Model.Title</h2>
                             <p class="card-text">@Model.Description</p>
-                            <p class="card-text"><strong>Price:</strong> $@Model.Price</p>
-                            <p class="card-text"><strong>Duration:</strong> @Model.DurationDays days</p>
-                            <p class="card-text"><strong>Owner:</strong> @Model.OwnerName (@Model.OwnerType)</p>
 
-                            @if (Model.AvgRating.HasValue)
-                            {
-                                <p class="card-text"><strong>Average Rating:</strong> @Model.AvgRating.Value.ToString("0.0") / 5</p>
-                            }
+                            <div class="row g-3">
+                                <div class="col-sm-6">
+                                    <p class="card-text mb-1"><strong>Price:</strong> @money(Model.Price)</p>
+                                    <p class="card-text mb-1"><strong>Duration:</strong> @Model.DurationDays day@(Model.DurationDays == 1 ? "" : "s")</p>
+                                </div>
+                                <div class="col-sm-6">
+                                    <p class="card-text mb-1">
+                                        <strong>Owner:</strong> @Model.OwnerName (@Model.OwnerType)
+                                    </p>
+                                    @if (Model.AvgRating.HasValue)
+                                    {
+                                        <p class="card-text mb-1">
+                                            <strong>Average Rating:</strong> @Model.AvgRating.Value.ToString("0.0") / 5
+                                        </p>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
             <!-- Package Card End -->
-            <!-- Existing Booking Alert -->
+            <!-- Existing Booking Alert (for logged-in Tourist) -->
             @if (Model.ExistingBooking != null)
             {
                 <div class="alert alert-info d-flex justify-content-between align-items-center mb-3">
                     <div>
-                        <strong>You have already booked this package.</strong>
-                        <br />
+                        <strong>You have already booked this package.</strong><br />
                         Status:
                         @if (Model.ExistingBooking.Status == "Pending")
-                        {
-                            <span class="badge bg-warning">@Model.ExistingBooking.Status</span>
-                        }
+                        {<span class="badge bg-warning">Pending</span> }
                         else if (Model.ExistingBooking.Status == "Approved")
-                        {
-                            <span class="badge bg-success">@Model.ExistingBooking.Status</span>
-                        }
+                        { <span class="badge bg-success">Approved</span> }
                         else
-                        {
-                            <span class="badge bg-danger">@Model.ExistingBooking.Status</span>
-                        }
+                        { <span class="badge bg-danger">Rejected</span>}
 
-                        Payment:
+                        &nbsp;&nbsp;Payment:
                         @if (Model.ExistingBooking.PaymentStatus == "Paid")
-                        {
-                            <span class="badge bg-success">@Model.ExistingBooking.PaymentStatus</span>
-                        }
+                        {<span class="badge bg-success">Paid</span> }
                         else
-                        {
-                            <span class="badge bg-warning">@Model.ExistingBooking.PaymentStatus</span>
-                        }
+                        { <span class="badge bg-secondary">Pending</span>}
                     </div>
-                    @*<div>
-                        <a href="@Url.Action("EditBooking", "PublicPackage", new { id = Model.ExistingBooking.BookingId })" class="btn btn-sm btn-warning me-2">Edit</a>
-                        @using (Html.BeginForm("CancelBooking", "PublicPackage", new { id = Model.ExistingBooking.BookingId }, FormMethod.Post, new { onsubmit = "return confirm('Are you sure you want to cancel this booking?');", style = "display:inline" }))
-                        {
-                            @Html.AntiForgeryToken()
-                            <button type="submit" class="btn btn-sm btn-danger">Cancel</button>
-                        }
-                        @if (Model.ExistingBooking.PaymentStatus != "Paid")
-                        {
-                            <a href="@Url.Action("Pay", "PublicPackage", new { bookingId = Model.ExistingBooking.BookingId })" class="btn btn-sm btn-primary ms-2">Pay Now</a>
-                        }
-                    </div>*@
                 </div>
             }
 
             <!-- Upcoming Sessions -->
             <div class="card shadow-sm mb-4 p-3">
-                <h3>Upcoming Sessions</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3 class="mb-0">Upcoming Sessions</h3>
+                    @if (Model.UpcomingSessions != null && Model.UpcomingSessions.Any())
+                    {
+                        <small class="text-muted">Select a date to book</small>
+                    }
+                </div>
+
                 @if (Model.UpcomingSessions == null || !Model.UpcomingSessions.Any())
                 {
-                    <p>No upcoming sessions.</p>
+                    <p class="mt-3 mb-0">No upcoming sessions.</p>
                 }
                 else
                 {
-                    <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                    <div class="table-responsive mt-3" style="max-height: 420px; overflow-y: auto;">
                         <table class="table table-striped align-middle">
                             <thead>
                                 <tr>
@@ -112,24 +202,40 @@
                             <tbody>
                                 @foreach (var session in Model.UpcomingSessions)
                                 {
+                                    var available = session.Capacity - session.Booked;
                                     <tr>
                                         <td>@session.StartDate.ToString("dd MMM yyyy")</td>
                                         <td>@session.EndDate.ToString("dd MMM yyyy")</td>
-                                        <td>@(session.Capacity - session.Booked)</td>
+                                        <td>@available</td>
                                         <td class="text-center">
                                             @if (Model.ExistingBooking != null && Model.ExistingBooking.SessionId == session.SessionId)
                                             {
                                                 <span class="badge bg-info">Already Booked</span>
                                             }
-                                            else if ((session.Capacity - session.Booked) > 0)
+                                            else if (available <= 0)
                                             {
-                                                <a href="@Url.Action("Book", "PublicPackage", new { packageId = Model.PackageId, sessionId = session.SessionId })" class="btn btn-success btn-sm">Book Now</a>
+                                                <span class="badge bg-danger">Full</span>
                                             }
                                             else
                                             {
-                                                <span class="text-danger">Full</span>
+                                                if (!isAuth)
+                                                {
+                                                    <a href="@bookUrl(session.SessionId)" class="btn btn-success btn-sm">Book Now</a>
+                                                }
+                                                else if (isTourist)
+                                                {
+                                                    <a href="@bookUrl(session.SessionId)" class="btn btn-success btn-sm">Book Now</a>
+                                                }
+                                                else
+                                                {
+                                                    <button type="button" class="btn btn-secondary btn-sm" disabled
+                                                            title="Booking is available to Tourist accounts">
+                                                        Book Now
+                                                    </button>
+                                                }
                                             }
                                         </td>
+
                                     </tr>
                                 }
                             </tbody>
@@ -143,67 +249,69 @@
                 <h3>Reviews</h3>
                 @if (Model.Reviews == null || !Model.Reviews.Any())
                 {
-                    <p>No reviews yet.</p>
+                    <p class="mb-0">No reviews yet.</p>
                 }
                 else
                 {
                     foreach (var review in Model.Reviews)
                     {
                         <div class="mb-3 border-bottom pb-2">
-                            <p><strong>@review.TouristName</strong>: @review.Rating / 5</p>
-                            <p>@review.Comment</p>
+                            <p class="mb-1"><strong>@review.TouristName</strong> — @review.Rating / 5</p>
+                            <p class="mb-0">@review.Comment</p>
                         </div>
                     }
                 }
+                @* If you later enable review creation, you can show a button for eligible tourists here *@
+                @* Example (requires controller logic to check eligibility):
+            @if (isTourist && (ViewBag.CanReview as bool? ?? false))
+            {
+                <a class="btn btn-outline-primary btn-sm mt-2" href="@Url.Action("CreateReview","Tourist", new { packageId = Model.PackageId })">
+                    Write a Review
+                </a>
+            }
+                *@
             </div>
 
-            <!-- My Bookings -->
-            <div class="card shadow-sm mb-4 p-3">
-                <h3>My Bookings</h3>
-                @if (ViewBag.MyBookings != null && ((List<PackageBookingVm>)ViewBag.MyBookings).Any())
-                {
-                    foreach (var booking in (List<PackageBookingVm>)ViewBag.MyBookings)
+            <!-- My Bookings (Tourist only) -->
+            @if (isTourist)
+            {
+                <div class="card shadow-sm mb-4 p-3">
+                    <h3>My Bookings</h3>
+                    @if (ViewBag.MyBookings != null && ((List<PackageBookingVm>)ViewBag.MyBookings).Any())
                     {
-                        <div class="mb-3 border-bottom pb-2">
-                            <p><strong>Session:</strong> @booking.SelectedSessionDate.ToString("dd MMM yyyy") - @booking.SelectedSessionEnd.ToString("dd MMM yyyy")</p>
-                            <p><strong>Participants:</strong> @booking.Participants</p>
-
-                            <p>
-                                <strong>Status:</strong>
-                                @if (booking.Status == "Approved")
-                                {
-                                    <span class="badge bg-success">@booking.Status</span>
-                                }
-                                else if (booking.Status == "Rejected")
-                                {
-                                    <span class="badge bg-danger">@booking.Status</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-warning">@booking.Status</span>
-                                }
-                            </p>
-
-                            <p>
-                                <strong>Payment:</strong>
-                                @if (booking.PaymentStatus == "Paid")
-                                {
-                                    <span class="badge bg-success">@booking.PaymentStatus</span>
-                                }
-                                else
-                                {
-                                    <span class="badge bg-secondary">Pending by Admin</span>
-                                }
-                            </p>
-
-                         
-                        </div>
+                        foreach (var booking in (List<PackageBookingVm>)ViewBag.MyBookings)
+                        {
+                            <div class="mb-3 border-bottom pb-2">
+                                <p class="mb-1"><strong>Session:</strong> @booking.SelectedSessionDate.ToString("dd MMM yyyy") – @booking.SelectedSessionEnd.ToString("dd MMM yyyy")</p>
+                                <p class="mb-1"><strong>Participants:</strong> @booking.Participants</p>
+                                <p class="mb-1">
+                                    <strong>Status:</strong>
+                                    @if (booking.Status == "Approved")
+                                    {<span class="badge bg-success">Approved</span> }
+                                    else if (booking.Status == "Rejected")
+                                    { <span class="badge bg-danger">Rejected</span> }
+                                    else
+                                    { <span class="badge bg-warning">Pending</span>}
+                                </p>
+                                <p class="mb-0">
+                                    <strong>Payment:</strong>
+                                    @if (booking.PaymentStatus == "Paid")
+                                    {<span class="badge bg-success">Paid</span> }
+                                    else
+                                    { <span class="badge bg-secondary">Pending by Admin</span>}
+                                </p>
+                            </div>
+                        }
                     }
-                }
-                else
-                {
-                    <p>You have no bookings.</p>
-                }
+                    else
+                    {
+                        <p class="mb-0">You have no bookings for this package.</p>
+                    }
+                </div>
+            }
+
+            <div class="text-center">
+                <a href="@packagesUrl" class="btn btn-outline-secondary">← Back to Packages</a>
             </div>
 
 

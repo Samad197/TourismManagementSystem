@@ -1,0 +1,26 @@
+﻿@{
+    var hasSuccess = TempData["Success"] != null;
+    var hasInfo = TempData["Info"] != null;
+    var hasError = TempData["Error"] != null;
+    var any = hasSuccess || hasInfo || hasError;
+}
+
+@if (any)
+{
+    <div class="container mt-3" id="flash-container">
+        @if (hasSuccess)
+        {<div class="alert alert-success shadow-sm mb-2">@TempData["Success"]</div>}
+        @if (hasInfo)
+        {<div class="alert alert-info    shadow-sm mb-2">@TempData["Info"]</div>}
+        @if (hasError)
+        {<div class="alert alert-danger  shadow-sm mb-2">@TempData["Error"]</div>}
+    </div>
+
+    <script>
+        // Auto-dismiss after 6s (optional)
+        setTimeout(function(){
+            var el = document.getElementById('flash-container');
+            if (el) el.remove();
+        }, 6000);
+    </script>
+}

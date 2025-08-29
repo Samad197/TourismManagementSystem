@@ -1,0 +1,77 @@
+﻿@model TourismManagementSystem.Models.ViewModels.UserDetailsVm
+@{
+    ViewBag.Title = "User Details";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-4">User Details</h3>
+        <p class="text-white-50 mb-0">@Model.FullName (@Model.RoleName)</p>
+    </div>
+</div>
+
+<div class="container py-4" style="max-width:900px;">
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div><strong>Name:</strong> @Model.FullName</div>
+            <div><strong>Email:</strong> @Model.Email</div>
+            <div><strong>Role:</strong> @Model.RoleName</div>
+            <div><strong>Active:</strong> @(Model.IsActive ? "Yes" : "No")</div>
+            <div><strong>Approved:</strong> @(Model.IsApproved ? "Yes" : "No")</div>
+            <div><strong>Created:</strong> @Model.CreatedAt.ToString("yyyy-MM-dd HH:mm")</div>
+        </div>
+    </div>
+
+    @if (Model.RoleName == "Agency")
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light fw-bold">Agency Profile</div>
+            <div class="card-body">
+                <div><strong>Agency Name:</strong> @(Model.AgencyName ?? "-")</div>
+                <div><strong>Phone:</strong> @(Model.AgencyPhone ?? "-")</div>
+
+                <div>
+                    <strong>Website:</strong>
+                    @if (!string.IsNullOrWhiteSpace(Model.AgencyWebsite))
+                    {
+                        <a href="@Model.AgencyWebsite" target="_blank">@Model.AgencyWebsite</a>
+                    }
+                    else
+                    {
+                        @: -
+                    }
+                </div>
+
+                <div>
+                    <strong>Verification Doc:</strong>
+                    @if (!string.IsNullOrWhiteSpace(Model.AgencyDocUrl))
+                    {
+                        <a href="@Model.AgencyDocUrl" target="_blank">Open</a>
+                    }
+                    else
+                    {
+                        @: -
+                    }
+                </div>
+
+                <div><strong>Status:</strong> @(Model.AgencyStatus ?? "-")</div>
+            </div>
+        </div>
+    }
+
+
+    @if (Model.RoleName == "Guide")
+    {
+        <div class="card shadow-sm mb-3">
+            <div class="card-header bg-light fw-bold">Guide Profile</div>
+            <div class="card-body">
+                <div><strong>Name on License:</strong> @(Model.GuideFullNameOnLicense ?? "-")</div>
+                <div><strong>License #:</strong> @(Model.GuideLicenseNo ?? "-")</div>
+                <div><strong>Status:</strong> @(Model.GuideStatus ?? "-")</div>
+            </div>
+        </div>
+    }
+
+    <a href="@Url.Action("Approvals","Admin")" class="btn btn-outline-secondary me-2">Back to Approvals</a>
+    <a href="@Url.Action("Users","Admin")" class="btn btn-outline-secondary">Back to Users</a>
+</div>

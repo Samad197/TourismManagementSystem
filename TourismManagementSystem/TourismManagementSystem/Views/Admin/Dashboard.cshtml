@@ -1,35 +1,233 @@
 ﻿@model TourismManagementSystem.Models.ViewModels.AdminDashboardVm
+
 @{
     ViewBag.Title = "Admin Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Optional fields (won’t crash if your VM doesn’t have them yet)
+    var pendingPayments = 0M;
+    try { pendingPayments = (decimal)(ViewBag.PendingPayments ?? (Model.GetType().GetProperty("PendingPayments") != null ? (Model.GetType().GetProperty("PendingPayments").GetValue(Model) ?? 0M) : 0M)); } catch { }
+    var recentBookings = ViewBag.RecentBookings as IEnumerable<dynamic>;
+    var paymentQueue = ViewBag.PaymentQueue as IEnumerable<dynamic>;
 }
 
+<!-- Header -->
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width:900px;">
         <h3 class="text-white display-3 mb-4">Admin Dashboard</h3>
+        <p class="text-white-50 mb-0">Platform overview, approvals, payments & reports</p>
     </div>
 </div>
 
+<!-- Flash -->
+@Html.Partial("_Flash")
+
 <div class="container py-4">
-    @if (TempData["Success"] != null)
-    {<div class="alert alert-success">@TempData["Success"]</div>}
-    @if (TempData["Info"] != null)
-    {<div class="alert alert-info">@TempData["Info"]</div>}
 
+    <!-- Date Range (for reports/metrics) -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            @using (Html.BeginForm("Dashboard", "Admin", FormMethod.Get, new { @class = "row g-2 align-items-end" }))
+            {
+                <div class="col-md-3">
+                    <label class="form-label">From</label>
+                    <input type="date" name="from" class="form-control" value="@Request["from"]" />
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To</label>
+                    <input type="date" name="to" class="form-control" value="@Request["to"]" />
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <button class="btn btn-primary mt-3 mt-md-0" type="submit">
+                        <i class="fas fa-filter me-1"></i> Apply
+                    </button>
+                    <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"] })">
+                        <i class="fas fa-chart-line me-1"></i> Open Reports
+                    </a>
+                    <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"], export = "csv" })">
+                        <i class="fas fa-file-csv me-1"></i> Export CSV
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Pending Agencies</div>
+                <div class="display-6">@Model.PendingAgencies</div>
+                <a class="small mt-2" href="@Url.Action("Approvals","Admin")">Review</a>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Pending Guides</div>
+                <div class="display-6">@Model.PendingGuides</div>
+                <a class="small mt-2" href="@Url.Action("Approvals","Admin", new { tab="guides" })">Review</a>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Total Users</div>
+                <div class="display-6">@Model.TotalUsers</div>
+                <a class="small mt-2" href="@Url.Action("Users","Admin")">Manage</a>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Total Bookings</div>
+                <div class="display-6">@Model.TotalBookings</div>
+                <span class="small text-muted">All time</span>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Paid Revenue</div>
+                <div class="h4 mb-0">@Model.PaidRevenue.ToString("C0")</div>
+                <span class="small text-muted">All time</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Queues & Recent Activity -->
     <div class="row g-3">
-        <div class="col-md-3"><div class="card p-3"><h6>Pending Agencies</h6><h3>@Model.PendingAgencies</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>Pending Guides</h6><h3>@Model.PendingGuides</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>Total Users</h6><h3>@Model.TotalUsers</h3></div></div>
-        <div class="col-md-3"><div class="card p-3"><h6>Total Bookings</h6><h3>@Model.TotalBookings</h3></div></div>
+        <!-- Approval Queue (summary) -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light fw-bold">Approval Queue</div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>Agencies awaiting approval</div>
+                        <span class="badge bg-warning text-dark">@Model.PendingAgencies</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>Guides awaiting approval</div>
+                        <span class="badge bg-warning text-dark">@Model.PendingGuides</span>
+                    </div>
+                </div>
+                <div class="card-footer bg-white">
+                    <a class="btn btn-primary btn-sm" href="@Url.Action("Approvals","Admin")">
+                        <i class="fas fa-user-check me-1"></i> Go to Approvals
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Verification (optional, if you want Admin to manage payment status) -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light fw-bold">Payments to Verify</div>
+                <div class="card-body p-0">
+                    @if (paymentQueue != null && paymentQueue.Any())
+                    {
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Booking</th>
+                                        <th>Customer</th>
+                                        <th>Amount</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var p in paymentQueue)
+                                    {
+                                        <tr>
+                                            <td>
+                                                <div class="small fw-semibold">@p.PackageTitle</div>
+                                                <div class="small text-muted">@(((DateTime)p.StartDate).ToString("dd MMM yyyy"))</div>
+                                            </td>
+                                            <td class="small">@p.CustomerName</td>
+                                            <td class="small">@(((decimal)p.Amount).ToString("C0"))</td>
+                                            <td class="small">
+                                                @using (Html.BeginForm("MarkPaymentPaid", "Admin", FormMethod.Post))
+                                                {
+                                                    @Html.AntiForgeryToken()
+                                                    @Html.Hidden("bookingId", (int)p.BookingId)
+                                                    <button class="btn btn-success btn-sm mb-1" type="submit">Mark Paid</button>
+                                                }
+                                                @using (Html.BeginForm("MarkPaymentRefund", "Admin", FormMethod.Post))
+                                                {
+                                                    @Html.AntiForgeryToken()
+                                                    @Html.Hidden("bookingId", (int)p.BookingId)
+                                                    <button class="btn btn-outline-danger btn-sm" type="submit">Refund</button>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">No payments waiting for admin verification.</div>
+                    }
+                </div>
+                <div class="card-footer bg-white">
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Reports","Admin", new { section = "payments" })">
+                        <i class="fas fa-receipt me-1"></i> Payment Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Booking Activity -->
+        <!-- Recent Booking Activity -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-light fw-bold">Recent Booking Activity</div>
+                <div class="card-body p-0">
+                    @if (Model.RecentBookings != null && Model.RecentBookings.Any())
+                    {
+                        <div class="list-group list-group-flush">
+                            @foreach (var b in Model.RecentBookings)
+                            {
+                                <div class="list-group-item">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="small">
+                                            <div class="fw-semibold">@b.PackageTitle</div>
+                                            <div class="text-muted">by @b.CustomerName • @b.CreatedAt.ToString("dd MMM HH:mm")</div>
+                                        </div>
+                                        <div class="text-end">
+                                            <div class="small">@b.Amount.ToString("C0")</div>
+                                            <span class="badge @(b.PaymentStatus == "Paid" ? "bg-success" : "bg-secondary")">
+                                                @b.PaymentStatus
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="p-3 text-muted">No recent bookings.</div>
+                    }
+                </div>
+                <div class="card-footer bg-white">
+                    <a class="btn btn-outline-secondary btn-sm" href="@Url.Action("Reports","Admin", new { section = "bookings" })">
+                        <i class="fas fa-list me-1"></i> Booking Reports
+                    </a>
+                </div>
+            </div>
+        </div>
+
     </div>
 
-    <div class="card p-3 mt-3">
-        <h6>Paid Revenue</h6>
-        <h3>@Model.PaidRevenue.ToString("N0")</h3>
-    </div>
-
+    <!-- Actions -->
     <div class="mt-4">
-        <a class="btn btn-primary" href="@Url.Action("Approvals","Admin")">Review Approvals</a>
-        <a class="btn btn-outline-primary ms-2" href="@Url.Action("Users","Admin")">Manage Users</a>
+        <a class="btn btn-primary" href="@Url.Action("Approvals","Admin")">
+            <i class="fas fa-user-check me-1"></i> Review Approvals
+        </a>
+        <a class="btn btn-outline-primary ms-2" href="@Url.Action("Users","Admin")">
+            <i class="fas fa-users-cog me-1"></i> Manage Users
+        </a>
+        <a class="btn btn-outline-primary ms-2" href="@Url.Action("Reports","Admin")">
+            <i class="fas fa-chart-line me-1"></i> Reports
+        </a>
     </div>
 </div>

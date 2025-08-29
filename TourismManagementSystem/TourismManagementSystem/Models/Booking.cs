@@ -31,6 +31,9 @@ namespace TourismManagementSystem.Models
         [Required, StringLength(20)]
         public string PaymentStatus { get; set; } = "Pending";  // Pending | Paid | Refunded
 
+        // ✅ Add this:
+        public DateTime? PaidAt { get; set; }
+
         // **New property for quick access**
         [Required, StringLength(150)]
         public string CustomerName { get; set; }

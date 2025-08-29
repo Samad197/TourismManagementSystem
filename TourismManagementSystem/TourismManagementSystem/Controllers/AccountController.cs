@@ -50,9 +50,8 @@ namespace TourismManagementSystem.Controllers
 
             if (!ModelState.IsValid) return View(vm);
 
-            // 1) Fast checks (outside transaction)
-            var exists = db.Users.AsNoTracking().Any(u => u.Email == vm.Email);
-            if (exists)
+            // 1) Fast checks
+            if (db.Users.AsNoTracking().Any(u => u.Email == vm.Email))
             {
                 ModelState.AddModelError("Email", "This email is already registered.");
                 return View(vm);
@@ -83,17 +82,19 @@ namespace TourismManagementSystem.Controllers
 
             if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
             {
-                db.TouristProfiles.Add(new TouristProfile
-                {
-                    User = user // navigation, EF will set FK after inserting User
-                });
+                db.TouristProfiles.Add(new TouristProfile { User = user });
             }
             else if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
             {
+                // ✅ satisfy [Required] AgencyName
+                var agencyName = (vm.FullName ?? "").Trim();
+                if (string.IsNullOrWhiteSpace(agencyName)) agencyName = "New Agency";
+                if (agencyName.Length > 100) agencyName = agencyName.Substring(0, 100);
+
                 db.AgencyProfiles.Add(new AgencyProfile
                 {
                     User = user,
-                    AgencyName = "",
+                    AgencyName = user.FullName,
                     Description = "",
                     Status = "PendingVerification"
                 });
@@ -115,12 +116,12 @@ namespace TourismManagementSystem.Controllers
                 return View(vm);
             }
 
-            // 3) One atomic commit with rollback on error
+            // 3) Atomic commit
             using (var tx = db.Database.BeginTransaction(IsolationLevel.ReadCommitted))
             {
                 try
                 {
-                    db.SaveChanges(); // inserts User + profile in the correct order
+                    db.SaveChanges();
                     tx.Commit();
                 }
                 catch (DbEntityValidationException vex)
@@ -130,43 +131,49 @@ namespace TourismManagementSystem.Controllers
                     foreach (var e in vex.EntityValidationErrors)
                         foreach (var ve in e.ValidationErrors)
                             sb.AppendLine($"{ve.PropertyName}: {ve.ErrorMessage}");
-                    ModelState.AddModelError("", "Validation failed: " + sb.ToString());
+                    ModelState.AddModelError("", "Validation failed: " + sb);
                     return View(vm);
                 }
-                catch (DbUpdateException uex)
+                catch (DbUpdateException)
                 {
                     tx.Rollback();
-
-                    // If you add a unique index on Email (see below), this catch
-                    // will handle duplicate email races gracefully.
                     ModelState.AddModelError("", "Could not complete registration. The email may already be registered or data is invalid.");
-                    // TODO: log uex for diagnostics
                     return View(vm);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
                     tx.Rollback();
                     ModelState.AddModelError("", "Unexpected error while registering. Please try again.");
-                    // TODO: log ex
                     return View(vm);
                 }
             }
 
-            // 4) Post-commit redirects
+            // 4) Post-commit redirects (make it exhaustive!)
             if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
             {
                 TempData["Success"] = "Account created. Please login.";
-                return RedirectToAction("Login");
+                return RedirectToAction("Login", "Account");
             }
-            if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
+            else if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
             {
-                TempData["Info"] = "Account created. Complete your Agency profile for approval.";
-                return RedirectToAction("CompleteAgencyProfile", "Agency");
+                TempData["Info"] = "Account created. Please login, then complete your Agency profile for approval.";
+                var returnUrl = Url.Action("Profile", "Agency"); // or CompleteAgencyProfile if you added it
+                return RedirectToAction("Login", "Account", new { returnUrl });
             }
-            // Guide
-            TempData["Info"] = "Account created. Complete your Guide profile for approval.";
-            return RedirectToAction("CompleteGuideProfile", "Guide");
+            else if (roleName.Equals("Guide", StringComparison.OrdinalIgnoreCase))
+            {
+                TempData["Info"] = "Account created. Please login, then complete your Guide profile for approval.";
+                var returnUrl = Url.Action("Profile", "Guide"); // or CompleteGuideProfile
+                return RedirectToAction("Login", "Account", new { returnUrl });
+            }
+            else
+            {
+                // Failsafe (should never hit because of earlier checks)
+                TempData["Success"] = "Account created. Please login.";
+                return RedirectToAction("Login", "Account");
+            }
         }
+
 
 
         // GET: /Account/Login
@@ -220,7 +227,7 @@ namespace TourismManagementSystem.Controllers
 
             // Role-based landing with approval gates
             if (roleName.Equals("Tourist", StringComparison.OrdinalIgnoreCase))
-                return SafeRedirect(returnUrl, "Dashboard", "Tourist");
+                return SafeRedirect(returnUrl, "MyBookings", "Tourist");
 
             if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
                 return user.IsApproved

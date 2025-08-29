@@ -7,6 +7,7 @@ using TourismManagementSystem.Models.ViewModels;
 using TourismManagementSystem.Data;
 using static TourismManagementSystem.Models.ViewModels.PublicPackageDetailsVm;
 using System.Data.Entity.Infrastructure;
+using System.Net;
 
 namespace TourismManagementSystem.Controllers
 {
@@ -18,6 +19,7 @@ namespace TourismManagementSystem.Controllers
 
         // GET: /packages
         [HttpGet, Route("")]
+        [AllowAnonymous]
         public ActionResult Index(string q, decimal? minPrice, decimal? maxPrice, int? minDays, int? maxDays, bool upcomingOnly = true)
         {
             ViewBag.ActivePage = "Packages";
@@ -29,34 +31,25 @@ namespace TourismManagementSystem.Controllers
             var query = db.TourPackages
                 .AsNoTracking()
                 .Include(p => p.Images)
-                .Include(p => p.Sessions)
+                .Include(p => p.Sessions.Select(s => s.Bookings.Select(b => b.Feedbacks)))
                 .Include(p => p.Agency.User)
                 .Include(p => p.Guide.User);
 
-            // Filter: Only approved & active owners
             query = query.Where(p =>
                 (p.AgencyId != null && p.Agency.User.IsApproved && p.Agency.User.IsActive) ||
                 (p.GuideId != null && p.Guide.User.IsApproved && p.Guide.User.IsActive));
 
-            // Filter: Only upcoming packages if upcomingOnly is true
             if (upcomingOnly)
-            {
-                query = query.Where(p =>
-                    (p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today))
-                );
-            }
+                query = query.Where(p => p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today));
 
-            // Search filter: matching title or description
             if (!string.IsNullOrWhiteSpace(q))
                 query = query.Where(p => p.Title.Contains(q) || p.Description.Contains(q));
 
-            // Filters: Price & Duration
             if (minPrice.HasValue) query = query.Where(p => p.Price >= minPrice.Value);
             if (maxPrice.HasValue) query = query.Where(p => p.Price <= maxPrice.Value);
             if (minDays.HasValue) query = query.Where(p => p.DurationDays >= minDays.Value);
             if (maxDays.HasValue) query = query.Where(p => p.DurationDays <= maxDays.Value);
 
-            // Map to ViewModel
             var packages = query
                 .OrderBy(p => p.Title)
                 .Select(p => new PublicPackageListItemVm
@@ -69,43 +62,61 @@ namespace TourismManagementSystem.Controllers
                     ThumbnailPath = p.Images.Any() ? p.Images.FirstOrDefault().ImagePath : "/images/placeholder.jpg",
                     OwnerType = p.AgencyId != null ? "Agency" : "Guide",
                     OwnerName = p.AgencyId != null ? p.Agency.User.FullName : p.Guide.User.FullName,
-                    HasUpcoming = p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today)
+                    HasUpcoming = p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today),
+
+                    // nullable average rating from feedback
+                    AvgRating = p.Sessions
+                                 .SelectMany(s => s.Bookings)
+                                 .SelectMany(b => b.Feedbacks)
+                                 .Select(f => (double?)f.Rating)
+                                 .Average()
                 })
                 .ToList();
 
-            return View(packages); // Views/PublicPackage/Index.cshtml
+            return View(packages);
         }
 
-        // GET: /packages/details/{id}
+
         [HttpGet, Route("details/{id:int}")]
+        [AllowAnonymous]
         public ActionResult Details(int id)
         {
-            // Load package with related data
+            ViewBag.ActivePage = "Packages";
+            ViewBag.ActivePageGroup = "Packages";
+
             var p = db.TourPackages
                 .Include(x => x.Images)
-                .Include(x => x.Sessions.Select(s => s.Bookings))
+                .Include(x => x.Sessions.Select(s => s.Bookings.Select(b => b.Feedbacks)))
+                .Include(x => x.Sessions.Select(s => s.Bookings.Select(b => b.Tourist)))
                 .Include(x => x.Agency.User)
                 .Include(x => x.Guide.User)
-                .Include(x => x.Reviews.Select(r => r.Tourist))
                 .FirstOrDefault(x => x.PackageId == id);
 
             if (p == null) return HttpNotFound();
 
-            // Hide details if owner not approved/active
             bool ownerApproved =
-                (p.AgencyId != null && p.Agency.User.IsApproved && p.Agency.User.IsActive) ||
-                (p.GuideId != null && p.Guide.User.IsApproved && p.Guide.User.IsActive);
+                (p.AgencyId != null && p.Agency?.User?.IsApproved == true && p.Agency.User.IsActive) ||
+                (p.GuideId != null && p.Guide?.User?.IsApproved == true && p.Guide.User.IsActive);
             if (!ownerApproved) return HttpNotFound();
 
-            // Get current user ID (Tourist)
-            int currentUserId = GetCurrentTouristId(); // implement this method according to your auth
+            int currentUserId = GetCurrentTouristId();
 
-            // Check if user already has a booking for this package
             var existingBooking = p.Sessions
                 .SelectMany(s => s.Bookings)
                 .FirstOrDefault(b => b.TouristId == currentUserId);
 
-            // Map to ViewModel
+            var reviewItems = p.Sessions
+                .SelectMany(s => s.Bookings)
+                .SelectMany(b => b.Feedbacks.Select(f => new PublicPackageDetailsVm.ReviewItem
+                {
+                    TouristName = b.Tourist != null ? b.Tourist.FullName : "Tourist",
+                    Rating = f.Rating,
+                    Comment = f.Comment
+                }))
+                .ToList();
+
+            double? avgRating = reviewItems.Any() ? (double?)reviewItems.Average(r => r.Rating) : null;
+
             var vm = new PublicPackageDetailsVm
             {
                 PackageId = p.PackageId,
@@ -118,55 +129,67 @@ namespace TourismManagementSystem.Controllers
                 OwnerType = p.AgencyId != null ? "Agency" : "Guide",
                 HeroImagePath = p.Images.FirstOrDefault()?.ImagePath,
                 Gallery = p.Images.Skip(1).Select(i => i.ImagePath).ToList(),
-                UpcomingSessions = p.Sessions.Select(s => new UpcomingSessionItem
-                {
-                    SessionId = s.SessionId,
-                    StartDate = s.StartDate,
-                    EndDate = s.EndDate,
-                    Capacity = s.Capacity,
-                    Booked = s.Bookings.Sum(b => b.Participants)
-                }).ToList(),
-                Reviews = p.Reviews.Select(r => new ReviewItem
-                {
-                    TouristName = r.Tourist.FullName,
-                    Rating = r.Rating,
-                    Comment = r.Comment
-                }).ToList(),
-                AvgRating = p.Reviews.Any() ? (double?)p.Reviews.Average(r => r.Rating) : null,
-
-                ExistingBooking = existingBooking // NEW: send existing booking to view
+                UpcomingSessions = p.Sessions
+                    .OrderBy(s => s.StartDate)
+                    .Select(s => new UpcomingSessionItem
+                    {
+                        SessionId = s.SessionId,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        Capacity = s.Capacity,
+                        Booked = s.Bookings
+                                      .Where(b => b.IsApproved == true)
+                                      .Select(b => (int?)b.Participants)
+                                      .DefaultIfEmpty(0)
+                                      .Sum() ?? 0
+                    })
+                    .ToList(),
+                Reviews = reviewItems,
+                AvgRating = avgRating,
+                ExistingBooking = existingBooking
             };
 
             return View(vm);
         }
 
 
+
         // GET: /packages/book?packageId=2&sessionId=2
         [HttpGet, Route("book")]
+        [Authorize(Roles = "Tourist")] // optional but recommended
         public ActionResult Book(int packageId, int? sessionId)
         {
+            ViewBag.ActivePage = "Packages";
+            ViewBag.ActivePageGroup = "Packages";
+
             var package = db.TourPackages
-                .Include(p => p.Sessions)
+                .Include(p => p.Sessions.Select(s => s.Bookings))
                 .FirstOrDefault(p => p.PackageId == packageId);
 
             if (package == null) return HttpNotFound();
 
             var upcomingSessions = package.Sessions
-                .Where(s => s.StartDate >= DateTime.Today)
-              .Select(s => new UpcomingSessionItem
-              {
+                .Where(s => s.StartDate >= DateTime.Today && !s.IsCanceled)
+                .OrderBy(s => s.StartDate)
+                .Select(s => new UpcomingSessionItem
+                {
                     SessionId = s.SessionId,
                     StartDate = s.StartDate,
                     EndDate = s.EndDate,
                     Capacity = s.Capacity,
-                    Booked = s.Bookings.Sum(b => b.Participants)
-                }).ToList();
+                    Booked = s.Bookings
+                                  .Where(b => b.IsApproved == true)
+                                  .Select(b => (int?)b.Participants)
+                                  .DefaultIfEmpty(0)
+                                  .Sum() ?? 0
+                })
+                .ToList();
 
             var vm = new PackageBookingVm
             {
                 PackageId = packageId,
                 PackageTitle = package.Title,
-                Participants = 1, // default
+                Participants = 1,
                 SelectedSessionId = sessionId ?? upcomingSessions.FirstOrDefault()?.SessionId ?? 0,
                 UpcomingSessions = upcomingSessions
             };
@@ -174,72 +197,85 @@ namespace TourismManagementSystem.Controllers
             return View(vm);
         }
 
+
         // POST: /packages/book
         [HttpPost, ValidateAntiForgeryToken, Route("book")]
+        [Authorize(Roles = "Tourist")] // optional but recommended
         public ActionResult Book(PackageBookingVm model)
         {
-            if (!ModelState.IsValid)
-                return View(model);
+            if (!ModelState.IsValid) return View(model);
 
-            // Make sure the session exists in the database
+            ViewBag.ActivePage = "Packages";
+            ViewBag.ActivePageGroup = "Packages";
+
             var session = db.Sessions
                 .Include(s => s.Bookings)
                 .FirstOrDefault(s => s.SessionId == model.SelectedSessionId && !s.IsCanceled);
 
             if (session == null)
             {
-                // Show a user-friendly error instead of FK crash
                 ModelState.AddModelError("", "The selected session does not exist or has been canceled.");
                 return View(model);
             }
 
-            // Calculate available seats
-            int availableSeats = session.Capacity - session.Bookings.Sum(b => b.Participants);
+            var touristId = GetCurrentTouristId();
+            if (touristId <= 0)
+            {
+                TempData["ErrorMessage"] = "Please log in as a Tourist to book.";
+                return RedirectToAction("Login", "Account", new
+                {
+                    returnUrl = Url.Action("Book", "PublicPackage", new { packageId = model.PackageId, sessionId = model.SelectedSessionId })
+                });
+            }
+
+            int approvedSeats = session.Bookings
+                .Where(b => b.IsApproved == true)
+                .Select(b => (int?)b.Participants)
+                .DefaultIfEmpty(0)
+                .Sum() ?? 0;
+            int availableSeats = session.Capacity - approvedSeats;
+
             if (model.Participants > availableSeats)
             {
                 ModelState.AddModelError("", $"Only {availableSeats} seat(s) are available for this session.");
                 return View(model);
             }
 
-            // Create the booking
             var booking = new Booking
             {
-                TouristId = GetCurrentTouristId(), // method to get logged-in tourist
+                TouristId = touristId,
                 SessionId = session.SessionId,
                 Participants = model.Participants,
                 Status = "Pending",
                 PaymentStatus = "Pending",
-                CreatedAt = DateTime.UtcNow
+                CustomerName = model.FullName,
+                CreatedAt = DateTime.UtcNow,
+                IsApproved = null
             };
 
             db.Bookings.Add(booking);
-
-            try
-            {
-                db.SaveChanges();
-            }
-            catch (DbUpdateException ex)
-            {
-                // Handle FK errors explicitly
-                ModelState.AddModelError("", "An error occurred while saving the booking. Please try again.");
-                return View(model);
-            }
+            db.SaveChanges();
 
             TempData["SuccessMessage"] = "Booking created successfully!";
             return RedirectToAction("Details", new { id = session.PackageId });
         }
 
 
+
+
         // GET: /packages/booking/edit/{id}
         [HttpGet, Route("booking/edit/{id:int}")]
+        [Authorize(Roles = "Tourist")]
         public ActionResult EditBooking(int id)
         {
+            var meId = GetCurrentTouristId();
+
             var booking = db.Bookings
-                .Include(b => b.Session.Package.Sessions)
-                .Include(b => b.Session.Bookings)
+                .Include(b => b.Session.Package.Sessions.Select(s => s.Bookings)) // include bookings for all sessions of this package
                 .FirstOrDefault(b => b.BookingId == id);
 
             if (booking == null) return HttpNotFound();
+            if (booking.TouristId != meId) return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
 
             var vm = new PackageBookingVm
             {
@@ -249,41 +285,64 @@ namespace TourismManagementSystem.Controllers
                 Participants = booking.Participants,
                 SelectedSessionId = booking.SessionId,
                 UpcomingSessions = booking.Session.Package.Sessions
-    .Where(s => s.StartDate >= DateTime.Today)
-    .Select(s => new UpcomingSessionItem
-    {
-        SessionId = s.SessionId,
-        StartDate = s.StartDate,
-        EndDate = s.EndDate,
-        Capacity = s.Capacity,
-        Booked = s.Bookings.Sum(b => b.Participants)
-    }).ToList()
-
-        };
+                    .Where(s => s.StartDate >= DateTime.Today && !s.IsCanceled)
+                    .OrderBy(s => s.StartDate)
+                    .Select(s => new UpcomingSessionItem
+                    {
+                        SessionId = s.SessionId,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        Capacity = s.Capacity,
+                        // Booked = approved-only
+                        Booked = s.Bookings
+                                      .Where(bk => bk.IsApproved == true)
+                                      .Select(bk => (int?)bk.Participants)
+                                      .DefaultIfEmpty(0)
+                                      .Sum() ?? 0
+                    })
+                    .ToList()
+            };
 
             return View(vm);
         }
 
+
+        // POST: /packages/booking/edit
         // POST: /packages/booking/edit
         [HttpPost, ValidateAntiForgeryToken, Route("booking/edit")]
+        [Authorize(Roles = "Tourist")]
         public ActionResult EditBooking(PackageBookingVm model)
         {
             if (!ModelState.IsValid) return View(model);
 
+            var meId = GetCurrentTouristId();
+
             var booking = db.Bookings.FirstOrDefault(b => b.BookingId == model.BookingId);
             if (booking == null) return HttpNotFound();
+            if (booking.TouristId != meId) return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
 
             var session = db.Sessions
                 .Include(s => s.Bookings)
                 .FirstOrDefault(s => s.SessionId == model.SelectedSessionId);
 
-            int availableSeats = session.Capacity - session.Bookings
-                .Where(b => b.BookingId != model.BookingId)
-                .Sum(b => b.Participants);
+            if (session == null)
+            {
+                ModelState.AddModelError("", "The selected session does not exist.");
+                return View(model);
+            }
+
+            // Seats taken by OTHER approved bookings
+            int approvedOthers = session.Bookings
+                .Where(b => b.BookingId != booking.BookingId && b.IsApproved == true)
+                .Select(b => (int?)b.Participants)
+                .DefaultIfEmpty(0)
+                .Sum() ?? 0;
+
+            int availableSeats = session.Capacity - approvedOthers;
 
             if (model.Participants > availableSeats)
             {
-                ModelState.AddModelError("", $"Only {availableSeats} seats are available for this session.");
+                ModelState.AddModelError("", $"Only {availableSeats} seat(s) are available for this session.");
                 return View(model);
             }
 
@@ -292,77 +351,114 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["SuccessMessage"] = "Booking updated successfully!";
-            return RedirectToAction("Details", new { id = booking.Session.PackageId });
+            return RedirectToAction("Details", new { id = session.PackageId });
         }
+
 
         // POST: /packages/booking/cancel/{id}
         [HttpPost, ValidateAntiForgeryToken, Route("booking/cancel/{id:int}")]
+        [Authorize(Roles = "Tourist")]
         public ActionResult CancelBooking(int id)
         {
-            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == id);
+            var meId = GetCurrentTouristId();
+
+            var booking = db.Bookings
+                .Include(b => b.Session) // to read PackageId after update
+                .FirstOrDefault(b => b.BookingId == id);
+
             if (booking == null) return HttpNotFound();
+            if (booking.TouristId != meId) return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
+
+            int pkgId = booking.Session.PackageId;
 
             booking.Status = "Cancelled";
-            booking.PaymentStatus = "Refunded"; // Optional
+            booking.PaymentStatus = "Refunded"; // optional
             db.SaveChanges();
 
             TempData["SuccessMessage"] = "Booking cancelled successfully!";
-            return RedirectToAction("Details", new { id = booking.Session.PackageId });
+            return RedirectToAction("Details", new { id = pkgId });
         }
 
+
         [HttpGet, Route("book/confirm")]
+        [Authorize(Roles = "Tourist")]
         public ActionResult ConfirmBooking(PackageBookingVm model)
         {
             if (model.SelectedSessionId == 0) return HttpNotFound();
+            ViewBag.ActivePage = "Packages";
+            ViewBag.ActivePageGroup = "Packages";
 
-            // Map selected session details
-            var session = db.Sessions.Include(s => s.Package).FirstOrDefault(s => s.SessionId == model.SelectedSessionId);
+
+            var session = db.Sessions.Include(s => s.Package)
+                            .FirstOrDefault(s => s.SessionId == model.SelectedSessionId);
             if (session == null) return HttpNotFound();
 
             model.PackageTitle = session.Package.Title;
             model.SelectedSessionDate = session.StartDate;
             model.SelectedSessionEnd = session.EndDate;
 
-            return View(model); // Views/PublicPackage/ConfirmBooking.cshtml
+            return View(model);
         }
+
         [HttpPost, ValidateAntiForgeryToken, Route("book/confirm")]
+        [Authorize(Roles = "Tourist")]
         public ActionResult ConfirmBookingPost(PackageBookingVm model)
         {
             if (!ModelState.IsValid) return View(model);
+            ViewBag.ActivePage = "Packages";
+            ViewBag.ActivePageGroup = "Packages";
 
-            var session = db.Sessions.Include(s => s.Bookings).FirstOrDefault(s => s.SessionId == model.SelectedSessionId);
+            var meId = GetCurrentTouristId();
+            var session = db.Sessions.Include(s => s.Bookings)
+                            .FirstOrDefault(s => s.SessionId == model.SelectedSessionId);
             if (session == null) return HttpNotFound();
 
-            int availableSeats = session.Capacity - session.Bookings.Sum(b => b.Participants);
+            // Approved-only capacity
+            int approvedSeats = session.Bookings
+                .Where(b => b.IsApproved == true)
+                .Select(b => (int?)b.Participants)
+                .DefaultIfEmpty(0)
+                .Sum() ?? 0;
+
+            int availableSeats = session.Capacity - approvedSeats;
             if (model.Participants > availableSeats)
             {
-                ModelState.AddModelError("", $"Only {availableSeats} seats are available for this session.");
+                ModelState.AddModelError("", $"Only {availableSeats} seat(s) are available for this session.");
                 return View(model);
             }
 
             var booking = new Booking
             {
-                TouristId = GetCurrentTouristId(),
+                TouristId = meId,
                 SessionId = session.SessionId,
                 Participants = model.Participants,
-                Status = "Confirmed",
+                Status = "Pending",      // ← stays pending (agency approves)
                 PaymentStatus = "Pending",
-                CreatedAt = DateTime.UtcNow
+                CustomerName = model.FullName,
+                CreatedAt = DateTime.UtcNow,
+                IsApproved = null
             };
 
             db.Bookings.Add(booking);
             db.SaveChanges();
 
-            TempData["SuccessMessage"] = "Booking confirmed successfully!";
+            TempData["SuccessMessage"] = "Booking submitted! You’ll be notified once the agency approves.";
             return RedirectToAction("Details", new { id = session.PackageId });
         }
+
 
 
         // Dummy method for current logged-in tourist
         private int GetCurrentTouristId()
         {
-            // Replace with real authentication logic
-            return 1;
+            var email = User?.Identity?.Name;
+            if (string.IsNullOrWhiteSpace(email)) return 0;
+            return db.Users
+                     .Where(u => u.Email == email)
+                     .Select(u => u.UserId)
+                     .FirstOrDefault();
         }
+
+
     }
 }

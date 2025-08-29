@@ -1,34 +1,47 @@
-﻿
-@using System.Security.Claims
+﻿@using System.Security.Claims
 @{
     // Auth
-    bool isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var ci = User?.Identity as ClaimsIdentity;
+    bool isAuth = ci?.IsAuthenticated ?? false;
 
-    // Try claims first
-    bool isAdmin = isAuth && User.IsInRole("Admin");
-    bool isAgency = isAuth && User.IsInRole("Agency");
-    bool isGuide = isAuth && User.IsInRole("Guide");
-    bool isTourist = isAuth && User.IsInRole("Tourist");
+    // Role
+    string role = (ci?.FindFirst(ClaimTypes.Role)?.Value ?? ViewBag.RoleName as string ?? "").Trim();
+    bool isAdmin = role.Equals("Admin", System.StringComparison.OrdinalIgnoreCase);
+    bool isAgency = role.Equals("Agency", System.StringComparison.OrdinalIgnoreCase);
+    bool isGuide = role.Equals("Guide", System.StringComparison.OrdinalIgnoreCase);
+    bool isTourist = role.Equals("Tourist", System.StringComparison.OrdinalIgnoreCase);
 
-    // Fallback to ViewBag (if you set it in BaseController)
-    var vbRole = ViewBag.RoleName as string;
-    if (isAuth && !string.IsNullOrEmpty(vbRole))
-    {
-        isAdmin = vbRole == "Admin";
-        isAgency = vbRole == "Agency";
-        isGuide = vbRole == "Guide";
-        isTourist = vbRole == "Tourist";
-    }
+    // Status (claims → ViewBag → Session)
+    string claimApproved = ci?.FindFirst("isApproved")?.Value;
+    string claimActive = ci?.FindFirst("isActive")?.Value;
 
-    // Helpers
-    Func<string, bool> IsRole = role => isAuth && (User.IsInRole(role) || string.Equals(vbRole, role));
+    bool isApproved = (claimApproved != null && bool.TryParse(claimApproved, out var _ap)) ? _ap
+                    : (ViewBag.IsApproved as bool?) ?? (Session["IsApproved"] as bool?) ?? false;
 
-    // Approval flag (for Agency/Guide)
-    bool isApproved = ViewBag.IsApproved is bool b && b;
+    bool isActive = (claimActive != null && bool.TryParse(claimActive, out var _ac)) ? _ac
+                    : (ViewBag.IsActive as bool?) ?? (Session["IsActive"] as bool?) ?? false;
 
-    // Active-class helpers (use Func instead of local functions)
-    Func<string, string> active = name => (ViewBag.ActivePage as string) == name ? "active" : "";
-    Func<string, string> activeGroup = name => (ViewBag.ActivePageGroup as string) == name ? "active" : "";
+    // Preview switch
+    var pv = Request["preview"];
+    bool forcePublicNav = !string.IsNullOrEmpty(pv) &&
+                          (pv == "1" || pv.Equals("true", System.StringComparison.OrdinalIgnoreCase) || pv.Equals("public", System.StringComparison.OrdinalIgnoreCase));
+
+    // Provider management gate
+    bool canManage = !forcePublicNav && (
+        isAdmin ||
+        (isAgency && isApproved && isActive) ||
+        (isGuide && isApproved && isActive)
+    );
+
+    // Show public-facing links (About/Services/etc.) only for public/tourist/preview
+    //bool showPublicLinks = forcePublicNav || !isAuth || isTourist;
+    bool showPublicLinks =
+    forcePublicNav || !isAuth || isTourist || (!isAgency && !isGuide && !isAdmin);
+
+
+    // Active-class helper
+    Func<string, string> active = name =>
+string.Equals(ViewBag.ActivePage as string, name, System.StringComparison.OrdinalIgnoreCase) ? "active" : "";
 }
 
 
@@ -37,10 +50,8 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>Travela - Tourism Website Template</title>
+    <title>@(ViewBag.Title ?? "Tourism Management System")</title>
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <meta content="" name="keywords">
-    <meta content="" name="description">
 
     <!-- Prevent Horizontal Scroll -->
     <style>
@@ -61,14 +72,12 @@
     <link href="@Url.Content("~/Content/lib/lightbox/css/lightbox.min.css")" rel="stylesheet" />
 
     <!-- Main Styles -->
-    <link href="@Url.Content("~/Content/css/bootstrap.min.css")" rel="stylesheet" />
-    <link href="@Url.Content("~/Content/css/style.css")" rel="stylesheet" />
+    <link href='@Url.Content("~/Content/css/bootstrap.min.css")' rel="stylesheet" />
+    <link href='@Url.Content("~/Content/css/style.css")' rel="stylesheet" />
 </head>
 
-
-
-
 <body>
+    <!-- Spinner Start -->
     <div id="spinner" class="show bg-white position-fixed translate-middle w-100 vh-100 top-50 start-50 d-flex align-items-center justify-content-center">
         <div class="spinner-border text-primary" style="width: 3rem; height: 3rem;" role="status">
             <span class="sr-only">Loading...</span>
@@ -90,7 +99,6 @@
 
             <div class="col-lg-4 text-center text-lg-end">
                 <div class="d-inline-flex align-items-center" style="height:45px;">
-
                     @if (!isAuth)
                     {
                         <!-- Guests -->
@@ -103,75 +111,26 @@
                     }
                     else
                     {
-                        <!-- Logged-in -->
+                        <!-- Account dropdown kept minimal (Settings + Logout). Feature links are in main navbar -->
                         <div class="dropdown">
                             <a href="#" class="dropdown-toggle text-light" data-bs-toggle="dropdown">
                                 <small>
-                                    <i class="fa fa-home me-2"></i> My Dashboard
-                                    (@(isAdmin ? "Admin" : isAgency ? "Agency" : isGuide ? "Guide" : "Tourist"))
+                                    <i class="fa fa-user-circle me-2"></i>
+                                    @(isAdmin ? "Admin" : isAgency ? "Agency" : isGuide ? "Guide" : "Tourist")
                                 </small>
-
                             </a>
                             <div class="dropdown-menu rounded dropdown-menu-end">
-
-                                @if (isTourist)
-                                {
-                                    <a href="@Url.Action("Dashboard","Tourist")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
-                                    <a href="@Url.Action("MyBookings","Tourist")" class="dropdown-item"><i class="fas fa-suitcase-rolling me-2"></i> My Bookings</a>
-                                    <a href="@Url.Action("History","Tourist")" class="dropdown-item"><i class="fas fa-history me-2"></i> Booking History</a>
-                                    <a href="@Url.Action("Profile","Tourist")" class="dropdown-item"><i class="fas fa-user-alt me-2"></i> Profile</a>
-                                }
-
-                                @if (isAgency)
-                                {
-                                    <a href="@Url.Action("Dashboard","Agency")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
-                                    @*<a href="@Url.Action("Index","Package")" class="dropdown-item"><i class="fas fa-archive me-2"></i> My Packages</a>*@
-
-                                    if (isAdmin || isAgency || isGuide)
-                                    {
-                                        <a href="@Url.Action("Index","Package")" class="nav-item nav-link @active("PrivatePackages")">My Packages</a>
-                                    }
-                                    else
-                                    {
-                                        <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>
-                                    }
-
-
-
-
-
-                                    <a href="@Url.Action("Create","Package")" class="dropdown-item"><i class="fas fa-plus me-2"></i> Create Package</a>
-                                    @*<a href="@Url.Action("Sessions","Agency")" class="dropdown-item"><i class="far fa-calendar-alt me-2"></i> Sessions</a>*@
-                                    <a href="@Url.RouteUrl("AgencySessionsLegacy")" class="dropdown-item">
-                                        <i class="far fa-calendar-alt me-2"></i> Sessions
-                                    </a>
-
-                                    <a href="@Url.Action("Bookings","Agency")" class="dropdown-item"><i class="fas fa-clipboard-list me-2"></i> Bookings</a>
-                                    <a href="@Url.Action("Payments","Agency")" class="dropdown-item"><i class="fas fa-receipt me-2"></i> Payments</a>
-                                    <a href="@Url.Action("Feedback","Agency")" class="dropdown-item"><i class="fas fa-comment-alt me-2"></i> Feedback</a>
-                                    <a href="@Url.Action("Profile","Agency")" class="dropdown-item"><i class="fas fa-user-cog me-2"></i> Agency Profile</a>
-                                }
-
-                                @if (isGuide)
-                                {
-                                    <a href="@Url.Action("Dashboard","Guide")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>
-                                    <a href="@Url.Action("AssignedTours","Guide")" class="dropdown-item"><i class="fas fa-map-marked-alt me-2"></i> My Tours</a>
-                                    <a href="@Url.Action("Schedule","Guide")" class="dropdown-item"><i class="far fa-calendar me-2"></i> Schedule</a>
-                                    <a href="@Url.Action("Feedback","Guide")" class="dropdown-item"><i class="fas fa-comment-dots me-2"></i> Feedback</a>
-                                    <a href="@Url.Action("Profile","Guide")" class="dropdown-item"><i class="fas fa-user-cog me-2"></i> Guide Profile</a>
-                                }
-
                                 @if (isAdmin)
-                                {
-                                    <a href="@Url.Action("Dashboard","Admin")" class="dropdown-item"><i class="fas fa-tools me-2"></i> Admin Dashboard</a>
-                                    <a href="@Url.Action("Approvals","Admin")" class="dropdown-item"><i class="fas fa-user-check me-2"></i> Approvals</a>
-                                    <a href="@Url.Action("Reports","Admin")" class="dropdown-item"><i class="fas fa-chart-line me-2"></i> Reports</a>
-                                    <a href="@Url.Action("Users","Admin")" class="dropdown-item"><i class="fas fa-users-cog me-2"></i> Manage Users</a>
-                                }
+                                {<a href="@Url.Action("Dashboard","Admin")" class="dropdown-item"><i class="fas fa-tools me-2"></i> Dashboard</a>}
+                                @if (isAgency)
+                                {<a href="@Url.Action("Dashboard","Agency")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>}
+                                @if (isGuide)
+                                {<a href="@Url.Action("Dashboard","Guide")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>}
+                                @if (isTourist)
+                                {<a href="@Url.Action("Dashboard","Tourist")" class="dropdown-item"><i class="fas fa-tachometer-alt me-2"></i> Dashboard</a>}
 
-                                <div class="dropdown-divider"></div>
                                 <a href="@Url.Action("Settings","Account")" class="dropdown-item"><i class="fas fa-cog me-2"></i> Account Settings</a>
-
+                                <div class="dropdown-divider"></div>
                                 @using (Html.BeginForm("Logout", "Account", FormMethod.Post, new { id = "logoutForm" }))
                                 {
                                     @Html.AntiForgeryToken()
@@ -187,20 +146,64 @@
         </div>
     </div>
     <!-- Topbar End -->
-    <!-- Approval Banner (only for Agency/Guide and not approved) -->
+    @* Pending-approval banner: render once (hidden), then relocate with JS so it appears below the page heading *@
     @if (isAuth && (isAgency || isGuide) && !isApproved)
     {
-        <div class="alert alert-warning rounded-0 mb-0 text-center">
-            Your account is <strong>pending approval</strong>. You can complete your profile and upload documents, but publishing tours/accepting bookings is disabled until approved.
-            <a class="ms-2" href="@Url.Action("Profile", isAgency ? "Agency" : "Guide")">Complete Profile</a>
-        </div>
+        @*<div id="approvalBanner" class="alert alert-warning rounded-0 text-center d-none" role="status">
+                Your account is <strong>pending approval</strong>. You can complete your profile and upload documents,
+                but publishing tours/accepting bookings is disabled until approved.
+                <a class="ms-2" href="@Url.Action("Profile", isAgency ? "Agency" : "Guide")">Complete Profile</a>
+            </div>*@
+        <script>
+            (function () {
+                function placeBanner() {
+                    var banner = document.getElementById('approvalBanner');
+                    if (!banner) return;
+
+                    // Preferred: right after the page header/hero if present
+                    var header = document.querySelector('.container-fluid.bg-breadcrumb');
+                    if (header && header.parentNode) {
+                        header.insertAdjacentElement('afterend', banner);
+                        banner.classList.remove('d-none');
+                        return;
+                    }
+
+                    // Fallback: place right under the navbar wrapper
+                    var navWrap = document.querySelector('.container-fluid.position-relative.p-0');
+                    if (navWrap && navWrap.parentNode) {
+                        navWrap.insertAdjacentElement('afterend', banner);
+                        banner.classList.remove('d-none');
+                        return;
+                    }
+
+                    // Last resort
+                    document.body.insertAdjacentElement('afterbegin', banner);
+                    banner.classList.remove('d-none');
+                }
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', placeBanner);
+                } else {
+                    placeBanner();
+                }
+            })();
+        </script>
     }
 
-    <!-- Navbar & Hero Start -->
+    <!-- Navbar Start -->
     <div class="container-fluid position-relative p-0">
+        @* Compute once for this request *@
+        @*@{
+                pv = Request["preview"];
+                forcePublicNav = !string.IsNullOrEmpty(pv) &&
+                                      (pv == "1" || pv.Equals("true", StringComparison.OrdinalIgnoreCase) || pv.Equals("public", StringComparison.OrdinalIgnoreCase));
+
+
+                canManage = !forcePublicNav && (isAdmin || ((isAgency || isGuide) && isApproved));
+            }*@
+
         <nav class="navbar navbar-expand-lg navbar-light px-4 px-lg-5 py-3 py-lg-0">
             <a href="@Url.Action("Index","Home")" class="navbar-brand p-0">
-                <h1 class="m-0"><i class="fa fa-map-marker-alt me-3"></i>Travela</h1>
+                <h1 class="m-0"><i class="fa fa-map-marker-alt me-3"></i>Tourism Management System</h1>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
                 <span class="fa fa-bars"></span>
@@ -208,83 +211,149 @@
 
             <div class="collapse navbar-collapse" id="navbarCollapse">
                 <div class="navbar-nav ms-auto py-0">
-                    <a href="@Url.Action("Index","Home")" class="nav-item nav-link @active("Home")">Home</a>
-                    <a href="@Url.Action("About","Home")" class="nav-item nav-link @active("About")">About</a>
-                    <a href="@Url.Action("Index","Service")" class="nav-item nav-link @active("Services")">Services</a>
-                    @if (isAdmin || isAgency || isGuide)
+
+                    @if (showPublicLinks)
                     {
-                        <a href="@Url.Action("Index","Package")" class="nav-item nav-link @active("Packages")">My Packages</a>
+                        <!-- Public / Tourist / Preview -->
+                        <a href="@Url.Action("Index","Home")" class="nav-item nav-link @active("Home")">Home</a>
+                        <a href="@Url.Action("About","Home")" class="nav-item nav-link @active("About")">About</a>
+                        <a href="@Url.Action("Index","Service")" class="nav-item nav-link @active("Services")">Services</a>
+                        @*<a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>*@
+
+                        @* Tourist extras *@
+                        if (isAuth && isTourist)
+                        {
+
+                            <a href="@Url.RouteUrl("TouristPackages")" class="nav-item nav-link @active("Packages")">Tourist Packages</a>
+                            <a href="@Url.Action("MyBookings","Tourist")" class="nav-item nav-link @active("MyBookings")">My Bookings</a>
+                            <a href="@Url.Action("History","Tourist")" class="nav-item nav-link @active("History")">History</a>
+                            <a href="@Url.Action("Profile","Tourist")" class="nav-item nav-link @active("TouristProfile")">Profile</a>
+                        }
+                        else
+                        {
+                            <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Public Packages</a>
+                        }
+
+                        <a href="@Url.Action("Contact","Home")" class="nav-item nav-link @active("Contact")">Contact</a>
                     }
                     else
                     {
-                        <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>
-                    }
-                    @*<a href="@Url.Action("Index","Package")" class="nav-item nav-link @active("Packages")">Packages</a>*@
+                        <!-- Authenticated providers/admins get trimmed menus -->
 
-                    <div class="nav-item dropdown">
-                        <a href="#" class="nav-link dropdown-toggle @activeGroup("Pages")" data-bs-toggle="dropdown">Pages</a>
-                        <div class="dropdown-menu m-0">
-                            <a href="@Url.Action("Index","Destination")" class="dropdown-item">Destination</a>
-                            <a href="@Url.Action("Index","Tour")" class="dropdown-item">Tour Details</a>
-                            <a href="@Url.Action("Index","Booking")" class="dropdown-item">Travel Booking</a>
-                            <a href="@Url.Action("Index","Gallery")" class="dropdown-item">Our Gallery</a>
-                            <a href="@Url.Action("Index","Guide")" class="dropdown-item">Travel Guides</a>
+                        <a href="@Url.Action("Index","Home")" class="nav-item nav-link @active("Home")">Home</a>
 
-                            @* Admin-only links inside Pages, optional *@
-                            @if (isAdmin)
+                        @* AGENCY *@
+                        if (isAgency)
+                        {
+                            <a href="@Url.Action("Dashboard","Agency")" class="nav-item nav-link @active("AgencyDashboard")">Dashboard</a>
+
+                            if (canManage)
                             {
-                                <div class="dropdown-divider"></div>
-                                <a href="@Url.Action("Approvals","Admin")" class="dropdown-item">Approvals</a>
-                                <a href="@Url.Action("Reports","Admin")" class="dropdown-item">Reports</a>
-                            }
-                        </div>
-                    </div>
+                                <a href="@Url.Action("Index","Package")" class="nav-item nav-link @active("Packages")">My Packages</a>
+                                <a href="@Url.Action("Create","Package")" class="nav-item nav-link @active("CreatePackage")">Create Package</a>
+                                <a href="@Url.Action("Index","PackageSessions")"
+                                   class="nav-item nav-link @active("Sessions")">
+                                    Sessions
+                                </a>
 
-                    <a href="@Url.Action("Contact","Home")" class="nav-item nav-link @active("Contact")">Contact</a>
+
+
+                                <a href="@Url.Action("Bookings","Agency")" class="nav-item nav-link @active("AgencyBookings")">Bookings</a>
+                                <a href="@Url.Action("Feedback","Agency")" class="nav-item nav-link @active("AgencyFeedback")">Feedback</a>
+                            }
+                            else
+                            {
+                                @* Not approved/active yet: only public packages *@
+                                <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>
+                            }
+
+                            <a href="@Url.Action("Profile","Agency")" class="nav-item nav-link @active("AgencyProfile")">Profile</a>
+                        }
+
+                        @* GUIDE *@
+                        if (isGuide)
+                        {
+                            <a href="@Url.Action("Dashboard","Guide")" class="nav-item nav-link @active("GuideDashboard")">Dashboard</a>
+
+                            if (canManage)
+                            {
+                                <a href="@Url.Action("AssignedTours","Guide")" class="nav-item nav-link @active("GuideTours")">My Tours</a>
+                                <a href="@Url.Action("Schedule","Guide")" class="nav-item nav-link @active("GuideSchedule")">Schedule</a>
+                                <a href="@Url.Action("Feedback","Guide")" class="nav-item nav-link @active("GuideFeedback")">Feedback</a>
+                            }
+                            else
+                            {
+                                <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>
+                            }
+
+                            <a href="@Url.Action("Profile","Guide")" class="nav-item nav-link @active("GuideProfile")">Profile</a>
+                        }
+
+                        @* ADMIN *@
+                        if (isAdmin)
+                        {
+                            <a href="@Url.Action("Dashboard","Admin")" class="nav-item nav-link @active("AdminDashboard")">Dashboard</a>
+                            <a href="@Url.Action("Approvals","Admin")" class="nav-item nav-link @active("Approvals")">Approvals</a>
+                            <a href="@Url.Action("Reports","Admin")" class="nav-item nav-link @active("Reports")">Reports</a>
+                            <a href="@Url.Action("Users","Admin")" class="nav-item nav-link @active("Users")">Users</a>
+                        }
+                    }
                 </div>
 
-                @* Primary CTA changes by role *@
-                @if (isTourist || !isAuth)
+                @* Primary CTA *@
+                @if (showPublicLinks)
                 {
-                    <a href="@Url.Action("Index","Booking")" class="btn btn-primary rounded-pill py-2 px-4 ms-lg-4">Book Now</a>
+                    <!-- was: @Url.Action("Index","Booking") -->
+                    @*<a href="@Url.Action("MyBookings","Tourist")"
+                        class="btn btn-primary rounded-pill py-2 px-4 ms-lg-4">Book Now</a>*@
+
+
                 }
-                else if ((isAgency || isGuide) && isApproved)
+                else if (canManage)
                 {
                     <a href="@Url.Action("Create","Package")" class="btn btn-primary rounded-pill py-2 px-4 ms-lg-4">Create Package</a>
                 }
-                else if ((isAgency || isGuide) && !isApproved)
+                else if (isAgency || isGuide)
                 {
                     <a href="@Url.Action("Profile", isAgency ? "Agency" : "Guide")" class="btn btn-primary rounded-pill py-2 px-4 ms-lg-4">Complete Profile</a>
                 }
             </div>
         </nav>
+
     </div>
-    <!-- Navbar & Hero End -->
-    <!-- Main Render Section -->
+    <!-- Navbar End -->
+    <!-- Global TempData Alerts (optional) -->
+    @*<div class="container mt-3">
+            @if (TempData["Success"] != null)
+            {<div class="alert alert-success shadow-sm">@TempData["Success"]</div>}
+            @if (TempData["Error"] != null)
+            {<div class="alert alert-danger  shadow-sm">@TempData["Error"]</div>}
+            @if (TempData["Info"] != null)
+            {<div class="alert alert-info    shadow-sm">@TempData["Info"]</div>}
+        </div>*@
+
+    <!-- Main Content -->
     <div class="container-fluid px-0">
         @RenderBody()
         @RenderSection("scripts", required: false)
     </div>
 
-
-
-
     <!-- Subscribe Start -->
-    <div class="container-fluid subscribe py-5">
-        <div class="container text-center py-5">
-            <div class="mx-auto text-center" style="max-width: 900px;">
-                <h5 class="subscribe-title px-3">Subscribe</h5>
-                <h1 class="text-white mb-4">Our Newsletter</h1>
-                <p class="text-white mb-5">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit. Laborum tempore nam, architecto doloremque velit explicabo? Voluptate sunt eveniet fuga eligendi! Expedita laudantium fugiat corrupti eum cum repellat a laborum quasi.
-                </p>
-                <div class="position-relative mx-auto">
-                    <input class="form-control border-primary rounded-pill w-100 py-3 ps-4 pe-5" type="text" placeholder="Your email">
-                    <button type="button" class="btn btn-primary rounded-pill position-absolute top-0 end-0 py-2 px-4 mt-2 me-2">Subscribe</button>
+    @*<div class="container-fluid subscribe py-5">
+            <div class="container text-center py-5">
+                <div class="mx-auto text-center" style="max-width: 900px;">
+                    <h5 class="subscribe-title px-3">Subscribe</h5>
+                    <h1 class="text-white mb-4">Our Newsletter</h1>
+                    <p class="text-white mb-5">
+                        Lorem ipsum dolor sit amet consectetur adipisicing elit. Laborum tempore nam, architecto doloremque velit explicabo?
+                    </p>
+                    <div class="position-relative mx-auto" style="max-width:600px;">
+                        <input class="form-control border-primary rounded-pill w-100 py-3 ps-4 pe-5" type="text" placeholder="Your email">
+                        <button type="button" class="btn btn-primary rounded-pill position-absolute top-0 end-0 py-2 px-4 mt-2 me-2">Subscribe</button>
+                    </div>
                 </div>
             </div>
-        </div>
-    </div>
+        </div>*@
     <!-- Subscribe End -->
     <!-- Footer Start -->
     <div class="container-fluid footer py-5">
@@ -347,13 +416,13 @@
                             <div class="col-xl-6">
                                 <form>
                                     <div class="form-floating">
-                                        <select class="form-select bg-dark border" id="select1">
+                                        <select class="form-select bg-dark border" id="select2">
                                             <option value="1">USD</option>
                                             <option value="2">EUR</option>
                                             <option value="3">INR</option>
                                             <option value="3">GBP</option>
                                         </select>
-                                        <label for="select1">$</label>
+                                        <label for="select2">$</label>
                                     </div>
                                 </form>
                             </div>
@@ -369,7 +438,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> <!-- row -->
         </div>
     </div>
     <!-- Footer End -->
@@ -378,12 +447,10 @@
         <div class="container">
             <div class="row g-4 align-items-center">
                 <div class="col-md-6 text-center text-md-end mb-md-0">
-                    <i class="fas fa-copyright me-2"></i><a class="text-white" href="#">Your Site Name</a>, All right reserved.
+                    <i class="fas fa-copyright me-2"></i>
+                    <a class="text-white" href="#">Your Site Name</a>, All right reserved.
                 </div>
                 <div class="col-md-6 text-center text-md-start">
-                    <!--/*** This template is free as long as you keep the below author’s credit link/attribution link/backlink. ***/-->
-                    <!--/*** If you'd like to use the template without the below author’s credit link/attribution link/backlink, ***/-->
-                    <!--/*** you can purchase the Credit Removal License from "https://htmlcodex.com/credit-removal". ***/-->
                     Designed By <a class="text-white" href="https://htmlcodex.com">HTML Codex</a>
                 </div>
             </div>
@@ -405,5 +472,107 @@
 
     <!-- Custom JS -->
     <script src='@Url.Content("~/Content/js/main.js")'></script>
+
+
+
+
+
+
+    <script>
+        (function () {
+            // run after DOM is ready
+            function placeBanner() {
+                var banner = document.getElementById('approvalBanner');
+                if (!banner) return;
+
+                // First choice: right after the page header/hero if present
+                var header = document.querySelector('.container-fluid.bg-breadcrumb');
+                if (header && header.parentNode) {
+                    header.insertAdjacentElement('afterend', banner);
+                    banner.classList.remove('d-none');
+                    return;
+                }
+
+                // Fallback: place right under the navbar container
+                var navWrap = document.querySelector('.container-fluid.position-relative.p-0');
+                if (navWrap && navWrap.parentNode) {
+                    navWrap.insertAdjacentElement('afterend', banner);
+                    banner.classList.remove('d-none');
+                    return;
+                }
+
+                // Last resort: top of body content
+                document.body.insertAdjacentElement('afterbegin', banner);
+                banner.classList.remove('d-none');
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', placeBanner);
+            } else {
+                placeBanner();
+            }
+        })();
+    </script>
+
+
+
+
+    <!-- jQuery must come first -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+    <!-- DataTables core + Bootstrap 5 integration -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            $('#sessionsTable').DataTable({
+                "pageLength": 10,          // default 10 rows
+                "lengthMenu": [5, 10, 25, 50],
+                "ordering": true,
+                "searching": true,
+                "language": {
+                    "search": "Search sessions:",
+                    "lengthMenu": "Show _MENU_ per page",
+                    "info": "Showing _START_ to _END_ of _TOTAL_ sessions"
+                }
+            });
+        });
+
+        $(function () {
+            // Sessions table
+            $('#tblSessions').DataTable({
+                pageLength: 5,
+                lengthMenu: [5, 10, 20, 50],
+                searching: true,
+                ordering: true,
+                responsive: true,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                }
+            });
+
+            // Bookings table
+            $('#tblBookings').DataTable({
+                pageLength: 5,
+                lengthMenu: [5, 10, 20, 50],
+                searching: true,
+                ordering: true,
+                responsive: true,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                }
+            });
+        });
+    </script>
+
+
+
+
 </body>
 </html>

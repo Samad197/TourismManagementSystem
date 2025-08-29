@@ -195,6 +195,14 @@
     <Compile Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.Designer.cs">
       <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
     </Compile>
+    <Compile Include="Migrations\202508290633375_TouristModelsAdjustments.cs" />
+    <Compile Include="Migrations\202508290633375_TouristModelsAdjustments.Designer.cs">
+      <DependentUpon>202508290633375_TouristModelsAdjustments.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Migrations\202508291248210_AddPaidAtToBooking.cs" />
+    <Compile Include="Migrations\202508291248210_AddPaidAtToBooking.Designer.cs">
+      <DependentUpon>202508291248210_AddPaidAtToBooking.cs</DependentUpon>
+    </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AgencyProfile.cs" />
     <Compile Include="Models\Booking.cs" />
@@ -221,6 +229,7 @@
     <Compile Include="Models\ViewModels\RegisterViewModel.cs" />
     <Compile Include="Models\ViewModels\SessionViewModels.cs" />
     <Compile Include="Models\ViewModels\TouristDashboardVms.cs" />
+    <Compile Include="Models\ViewModels\TouristVms.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -465,6 +474,15 @@
     <Content Include="Views\PublicPackage\Book.cshtml" />
     <Content Include="Views\Booking\Book.cshtml" />
     <Content Include="Views\Agency\Book.cshtml" />
+    <Content Include="Views\Shared\_Flash.cshtml" />
+    <Content Include="Views\Admin\Reports.cshtml" />
+    <Content Include="Views\Admin\UserDetails.cshtml" />
+    <Content Include="Views\Tourist\CreateReview.cshtml" />
+    <Content Include="Views\Tourist\History.cshtml" />
+    <Content Include="Views\Tourist\MyBookings.cshtml" />
+    <Content Include="Views\Tourist\Profile.cshtml" />
+    <Content Include="Views\Tourist\Index.cshtml" />
+    <Content Include="Views\Agency\Bookings.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />
@@ -533,6 +551,12 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.resx">
       <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508290633375_TouristModelsAdjustments.resx">
+      <DependentUpon>202508290633375_TouristModelsAdjustments.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Migrations\202508291248210_AddPaidAtToBooking.resx">
+      <DependentUpon>202508291248210_AddPaidAtToBooking.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>

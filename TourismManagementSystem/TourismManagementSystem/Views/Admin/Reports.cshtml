@@ -1,0 +1,82 @@
+﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.ReportBookingRowVm>
+@{
+    ViewBag.Title = "Reports";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    var from = ViewBag.From as string;
+    var to = ViewBag.To as string;
+
+    var totalRows = Model?.Count() ?? 0;
+    var totalAmount = Model?.Sum(r => r.Amount) ?? 0M;
+}
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-4">Booking Reports</h3>
+        <p class="text-white-50 mb-0">
+            @((!string.IsNullOrEmpty(from) || !string.IsNullOrEmpty(to)) ? $"Filtered: {from ?? "…"} → {to ?? "…"}" : "All time")
+        </p>
+    </div>
+</div>
+
+@Html.Partial("_Flash")
+
+<div class="container py-4">
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <a class="btn btn-outline-secondary" href="@Url.Action("Dashboard","Admin", new { from = from, to = to })">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+        <a class="btn btn-outline-primary" href="@Url.Action("Reports","Admin", new { from = from, to = to, export = "csv" })">
+            <i class="fas fa-file-csv me-1"></i> Export CSV
+        </a>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-3">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Rows</div>
+                <div class="display-6">@totalRows</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card p-3 shadow-sm h-100">
+                <div class="text-muted">Total Amount</div>
+                <div class="h4">@totalAmount.ToString("C0")</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>#</th>
+                    <th>Customer</th>
+                    <th>Package</th>
+                    <th>Start Date</th>
+                    <th>Participants</th>
+                    <th>Amount</th>
+                    <th>Payment</th>
+                    <th>Created</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null)
+                {
+                    foreach (var r in Model)
+                    {
+                        <tr>
+                            <td>@r.BookingId</td>
+                            <td>@r.CustomerName</td>
+                            <td>@r.PackageTitle</td>
+                            <td>@r.StartDate.ToString("dd MMM yyyy")</td>
+                            <td>@r.Participants</td>
+                            <td>@r.Amount.ToString("C0")</td>
+                            <td>@r.PaymentStatus</td>
+                            <td>@r.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
+                        </tr>
+                    }
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

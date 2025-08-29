@@ -1,81 +1,251 @@
 ﻿@model IEnumerable<TourismManagementSystem.Models.ViewModels.AdminUserListItemVm>
-    @{
+@{
     ViewBag.Title = "Manage Users";
     Layout = "~/Views/Shared/_Layout.cshtml";
-    }
+}
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-4">Users</h3>
+        <p class="text-white-50 mb-0">Activate/Deactivate, Approve providers</p>
+    </div>
+</div>
 
-    <div class="container-fluid bg-breadcrumb">
-        <div class="container text-center py-5" style="max-width:900px;">
-            <h3 class="text-white display-3 mb-4">Users</h3>
+@Html.Partial("_Flash")
+
+<div class="container py-4">
+
+    <div class="row g-2 mb-3 align-items-end">
+        <div class="col-md-3">
+            <label class="form-label">Role</label>
+            <select id="filterRole" class="form-select">
+                <option value="">All</option>
+                <option>Admin</option>
+                <option>Agency</option>
+                <option>Guide</option>
+                <option>Tourist</option>
+            </select>
         </div>
+        <div class="col-md-3">
+            <label class="form-label">Active</label>
+            <select id="filterActive" class="form-select">
+                <option value="">All</option>
+                <option value="true">Active</option>
+                <option value="false">Inactive</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <label class="form-label">Approved</label>
+            <select id="filterApproved" class="form-select">
+                <option value="">All</option>
+                <option value="true">Approved</option>
+                <option value="false">Not Approved</option>
+            </select>
+        </div>
+        @*<div class="col-md-3">
+            <label class="form-label">Search</label>
+            <div class="input-group">
+                <input id="searchUsers" type="text" class="form-control" placeholder="Search name or email">
+                <button id="btnApplyFilters" type="button" class="btn btn-outline-secondary">Search</button>
+                <button id="btnClearFilters" type="button" class="btn btn-outline-danger">Clear</button>
+            </div>
+            <small class="text-muted">Filters apply live; the Search button is optional.</small>
+        </div>*@
     </div>
 
-    <div class="container py-4">
-        <div class="table-responsive">
-            <table class="table table-striped align-middle">
-                <thead>
-                    <tr>
-                        <th>Role</th>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Active</th>
-                        <th>Approved</th>
-                        <th>Created</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var u in Model)
-                    {
-                    <tr>
-                        <td>@u.RoleName</td>
+
+    <div class="table-responsive">
+        <table id="usersTable" class="table table-striped align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Role</th>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Active</th>
+                    <th>Approved</th>
+                    <th>Created</th>
+                    <th style="width:280px;">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var u in Model)
+                {
+                    var isSelf = string.Equals(u.Email, User.Identity.Name, StringComparison.OrdinalIgnoreCase);
+                    var isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
+                    var isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
+
+                    <tr data-role="@u.RoleName" data-active="@u.IsActive.ToString().ToLower()" data-approved="@u.IsApproved.ToString().ToLower()">
+                        <td><span class="badge @(u.RoleName=="Admin"?"bg-dark":u.RoleName=="Agency"?"bg-primary":u.RoleName=="Guide"?"bg-info":"bg-secondary")">@u.RoleName</span></td>
                         <td>@u.FullName</td>
                         <td>@u.Email</td>
-                        <td>@u.IsActive</td>
-                        <td>@u.IsApproved</td>
+                        <td>@(u.IsActive ? Html.Raw("<span class='badge bg-success'>Active</span>") : Html.Raw("<span class='badge bg-secondary'>Inactive</span>"))</td>
+                        <td>@(u.IsApproved ? Html.Raw("<span class='badge bg-success'>Approved</span>") : Html.Raw("<span class='badge bg-warning text-dark'>Pending</span>"))</td>
                         <td>@u.CreatedAt.ToString("yyyy-MM-dd")</td>
-                        <td class="d-flex">
+                        <td class="d-flex flex-wrap gap-2">
+                            <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("UserDetails","Admin", new { id = u.UserId })">View</a>
+
                             @{
-                                var isSelf = string.Equals(u.Email, User.Identity.Name, StringComparison.OrdinalIgnoreCase);
-                                var isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
-                                var isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
+                                isSelf = string.Equals(u.Email, User.Identity.Name, StringComparison.OrdinalIgnoreCase);
+                                isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
+                                isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
                             }
 
-                            <!-- Toggle Active: show for everyone EXCEPT Admin rows and self -->
+                            @* Toggle Active for everyone except Admin rows and self *@
                             @if (!isSelf && !isAdminRow)
                             {
-                                using (Html.BeginForm("ToggleActive", "Admin", FormMethod.Post))
+                                using (Html.BeginForm("ToggleActive", "Admin", FormMethod.Post, new { id = $"formActive_{u.UserId}" }))
                                 {
                                     @Html.AntiForgeryToken()
                                     @Html.Hidden("id", u.UserId)
-                                    <button class="btn btn-sm btn-outline-secondary me-2" type="submit">Toggle Active</button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-secondary js-confirm-submit"
+                                            data-form-id="@($"formActive_{u.UserId}")"
+                                            data-title="Toggle Active"
+                                            data-message="Change active status for @u.FullName?"
+                                            data-variant="warning">
+                                        Toggle Active
+                                    </button>
                                 }
-                            }
-                            else
-                            {
-                                <span class="text-muted me-2">—</span>
                             }
 
-                            <!-- Toggle Approved: only for Agency/Guide; never for Admin/Tourist/self -->
+                            @* Toggle Approved for Agency/Guide only (not self) *@
                             @if (isProvider && !isSelf)
                             {
-                                using (Html.BeginForm("ToggleApproved", "Admin", FormMethod.Post))
+                                using (Html.BeginForm("ToggleApproved", "Admin", FormMethod.Post, new { id = $"formApprove_{u.UserId}" }))
                                 {
                                     @Html.AntiForgeryToken()
                                     @Html.Hidden("id", u.UserId)
-                                    <button class="btn btn-sm btn-outline-primary" type="submit">Toggle Approved</button>
+                                    <button type="button"
+                                            class="btn btn-sm btn-outline-primary js-confirm-submit"
+                                            data-form-id="@($"formApprove_{u.UserId}")"
+                                            data-title="Toggle Approval"
+                                            data-message="Approve / unapprove @u.FullName?"
+                                            data-variant="primary">
+                                        Toggle Approved
+                                    </button>
                                 }
-                            }
-                            else
-                            {
-                                <span class="text-muted">—</span>
                             }
                         </td>
 
-
                     </tr>
-                    }
-                </tbody>
-            </table>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Confirm Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true" aria-labelledby="confirmTitle">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmTitle">Confirm action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="confirmMessage">Are you sure?</div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="confirmYes" class="btn btn-primary">Yes, continue</button>
+            </div>
         </div>
     </div>
+</div>
+
+@section scripts{
+    <script>
+        (function () {
+            function init() {
+                // ---- Filtering (unchanged) ---------------------------
+                var role = document.getElementById('filterRole');
+                var active = document.getElementById('filterActive');
+                var approved = document.getElementById('filterApproved');
+                var search = document.getElementById('searchUsers');
+                var btnApply = document.getElementById('btnApplyFilters');
+                var btnClear = document.getElementById('btnClearFilters');
+                var rows = Array.prototype.slice.call(document.querySelectorAll('#usersTable tbody tr'));
+
+                function rowText(tr) {
+                    var tds = tr.getElementsByTagName('td'), s = '';
+                    for (var i = 0; i < tds.length; i++) s += ' ' + (tds[i].innerText || tds[i].textContent || '');
+                    return s.toLowerCase();
+                }
+                function applyFilters() {
+                    var r = ((role && role.value) || '').toLowerCase();
+                    var a = ((active && active.value) || '');
+                    var ap = ((approved && approved.value) || '');
+                    var q = ((search && search.value) || '').toLowerCase();
+
+                    rows.forEach(function (tr) {
+                        var okRole = !r || ((tr.getAttribute('data-role') || '').toLowerCase() === r);
+                        var okActive = !a || ((tr.getAttribute('data-active') || '') === a);
+                        var okApproved = !ap || ((tr.getAttribute('data-approved') || '') === ap);
+                        var okQuery = !q || (rowText(tr).indexOf(q) !== -1);
+                        tr.style.display = (okRole && okActive && okApproved && okQuery) ? '' : 'none';
+                    });
+                }
+                var t = null;
+                function debouncedApply() { clearTimeout(t); t = setTimeout(applyFilters, 220); }
+
+                if (role) role.addEventListener('change', applyFilters);
+                if (active) active.addEventListener('change', applyFilters);
+                if (approved) approved.addEventListener('change', applyFilters);
+                if (search) search.addEventListener('input', debouncedApply);
+                if (btnApply) btnApply.addEventListener('click', applyFilters);
+                if (btnClear) btnClear.addEventListener('click', function () {
+                    if (role) role.value = '';
+                    if (active) active.value = '';
+                    if (approved) approved.value = '';
+                    if (search) search.value = '';
+                    applyFilters();
+                });
+                applyFilters();
+
+                // ---- Bootstrap Confirm Modal wiring -------------------
+                var modalEl = document.getElementById('confirmModal');
+                var titleEl = document.getElementById('confirmTitle');
+                var msgEl = document.getElementById('confirmMessage');
+                var yesBtn = document.getElementById('confirmYes');
+                var bsModal = null;
+                var targetForm = null;
+
+                if (modalEl && window.bootstrap && window.bootstrap.Modal) {
+                    bsModal = new window.bootstrap.Modal(modalEl);
+                }
+
+                Array.prototype.forEach.call(document.querySelectorAll('.js-confirm-submit'), function (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.preventDefault();
+                        var formId = btn.getAttribute('data-form-id');
+                        var title = btn.getAttribute('data-title') || 'Confirm';
+                        var message = btn.getAttribute('data-message') || 'Are you sure?';
+                        var variant = btn.getAttribute('data-variant') || 'primary';
+
+                        targetForm = document.getElementById(formId);
+                        if (!targetForm || !bsModal) return;
+
+                        if (titleEl) titleEl.textContent = title;
+                        if (msgEl) msgEl.textContent = message;
+
+                        yesBtn.className = 'btn btn-' + variant;
+                        bsModal.show();
+                    });
+                });
+
+                if (yesBtn) {
+                    yesBtn.addEventListener('click', function () {
+                        if (targetForm) targetForm.submit();
+                    });
+                }
+            }
+
+            // Wait for DOM, then ensure Bootstrap is present
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    if (window.bootstrap) init(); else window.addEventListener('load', init);
+                });
+            } else {
+                if (window.bootstrap) init(); else window.addEventListener('load', init);
+            }
+        })();
+    </script>
+}
+

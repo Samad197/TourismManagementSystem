@@ -1,32 +1,133 @@
 ﻿@model TourismManagementSystem.Models.AgencyProfile
+@using System
 
 @{
     ViewBag.Title = "Awaiting Approval";
     Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Simple completeness calculation based on fields you already have
+    bool hasName = !string.IsNullOrWhiteSpace(Model?.AgencyName);
+    bool hasDesc = !string.IsNullOrWhiteSpace(Model?.Description);
+    bool hasPhone = !string.IsNullOrWhiteSpace(Model?.Phone);
+    bool hasSite = !string.IsNullOrWhiteSpace(Model?.Website);
+    bool hasDoc = !string.IsNullOrWhiteSpace(Model?.VerificationDocPath);
+
+    // Treat Website as optional in scoring if you prefer -> set includeWebsite = false
+    bool includeWebsite = false;
+    int total = includeWebsite ? 5 : 4;
+    int filled = (hasName ? 1 : 0) + (hasDesc ? 1 : 0) + (hasPhone ? 1 : 0) + (hasDoc ? 1 : 0) + (includeWebsite && hasSite ? 1 : 0);
+    int pct = (int)Math.Round((total == 0 ? 0 : (filled * 100.0 / total)));
 }
 
-<div class="container py-5" style="max-width:900px;">
-    <div class="alert alert-warning">
-        <h4 class="mb-2">Your agency is awaiting approval</h4>
-        <p class="mb-0">
-            An administrator must approve your account before your packages and sessions
-            are visible to tourists. Please ensure your <strong>Agency Profile</strong> is complete.
+<!-- Header -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">Agency Dashboard</h3>
+        <p class="text-white-50 mb-0">
+            Welcome, @(hasName ? Model.AgencyName : "New Agency")
         </p>
     </div>
+</div>
 
-    <div class="card shadow-sm rounded-3">
-        <div class="card-body">
-            <h5 class="card-title mb-3">Next steps</h5>
-            <ul class="mb-4">
-                <li>Complete your profile details and upload required documents.</li>
-                <li>Create draft packages; they’ll go live after approval.</li>
-            </ul>
-            <a href="@Url.Action("Profile","Agency")" class="btn btn-primary me-2">
-                <i class="fas fa-user-cog me-1"></i> Go to Agency Profile
-            </a>
-            <a href="@Url.Action("Create","Package")" class="btn btn-outline-secondary">
-                <i class="fas fa-plus me-1"></i> Create Package (Draft)
-            </a>
+<div class="container py-5" style="max-width:900px;">
+
+    <div class="alert alert-warning d-flex align-items-center justify-content-between">
+        <div>
+            <h4 class="mb-1">
+                Status:
+                <span class="badge bg-warning text-dark">Pending Approval</span>
+            </h4>
+            <p class="mb-0">
+                An administrator must approve your account before tours can be published and bookings accepted.
+                Please make sure your <strong>Agency Profile</strong> is complete and documents are uploaded.
+            </p>
         </div>
+        <div class="ms-3 d-none d-md-block">
+            <i class="fas fa-hourglass-half fa-2x text-warning"></i>
+        </div>
+    </div>
+
+    <!-- Profile completeness -->
+    <div class="card shadow-sm rounded-3 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="card-title mb-0">Profile completeness</h5>
+                <span class="small text-muted">@pct%</span>
+            </div>
+            <div class="progress mb-3" style="height:10px;">
+                <div class="progress-bar" role="progressbar" style="width:@pct%;" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    <i class="@(hasName ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Agency Name
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasDesc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Description
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasPhone ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Phone
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasDoc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Verification Document
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasSite ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Website <span class="text-muted small">(optional)</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- What you can & can't do yet -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm rounded-3 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Available now</h5>
+                    <ul class="mb-0">
+                        <li>Access your <strong>Dashboard</strong></li>
+                        <li>Complete your <strong>Agency Profile</strong></li>
+                        <li>Create <strong>draft</strong> packages (saved but not published)</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm rounded-3 h-100">
+                <div class="card-body">
+                    <h5 class="card-title mb-3">Locked until approval</h5>
+                    <ul class="mb-0">
+                        <li>Publish packages / open sessions</li>
+                        <li>Receive bookings & payments</li>
+                        <li>View public feedback on unpublished tours</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="d-flex flex-wrap gap-2">
+        <a href="@Url.Action("Profile","Agency")" class="btn btn-primary">
+            <i class="fas fa-user-cog me-1"></i> Complete Profile
+        </a>
+
+        <a href="@Url.Action("Create","Package")" class="btn btn-outline-secondary">
+            <i class="fas fa-plus me-1"></i> Create Package (Draft)
+        </a>
+
+        <a href="@Url.Action("Index","PublicPackage", new { preview = 1 })" class="btn btn-light">
+            <i class="fas fa-search me-1"></i> Preview Public Packages
+        </a>
+
+
+        @*<a href="@Url.Action("Contact","Home")" class="btn btn-link">
+            Need help? Contact support
+        </a>*@
     </div>
 </div>

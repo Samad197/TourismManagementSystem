@@ -1,24 +1,24 @@
 ﻿@*@model IEnumerable<TourismManagementSystem.Models.ViewModels.PublicPackageListItemVm>
 
-    @{
-        ViewBag.Title = "Packages";
+@{
+    ViewBag.Title = "Packages";
 
-        // Role awareness only affects Book Now behavior (login gate for non-tourists)
-        bool isAuth = User?.Identity?.IsAuthenticated ?? false;
-        bool isTourist = isAuth && User.IsInRole("Tourist");
+    // Role awareness only affects Book Now behavior (login gate for non-tourists)
+    bool isAuth = User?.Identity?.IsAuthenticated ?? false;
+    bool isTourist = isAuth && User.IsInRole("Tourist");
 
-        Func<int, string> detailsUrl = id => Url.Action("Details", "PublicPackage", new { id });
-        Func<int, string> bookEntryUrl = id =>
-            isTourist
-                ? detailsUrl(id) // go to details to pick a session
-                : Url.Action("Login", "Account", new { returnUrl = detailsUrl(id) });
+    Func<int, string> detailsUrl = id => Url.Action("Details", "PublicPackage", new { id });
+    Func<int, string> bookEntryUrl = id =>
+        isTourist
+            ? detailsUrl(id) // go to details to pick a session
+            : Url.Action("Login", "Account", new { returnUrl = detailsUrl(id) });
 
-        // Tiny helpers
-        Func<string, string> money = val => val; // using ToString("C") below
-        string FallbackImg(string path) => string.IsNullOrWhiteSpace(path)
-            ? Url.Content("~/Content/img/packages-1.jpg")
-            : Url.Content(path);
-    }*@
+    // Tiny helpers
+    Func<string, string> money = val => val; // using ToString("C") below
+    string FallbackImg(string path) => string.IsNullOrWhiteSpace(path)
+        ? Url.Content("~/Content/img/packages-1.jpg")
+        : Url.Content(path);
+}*@
 
 @model IEnumerable<TourismManagementSystem.Models.ViewModels.PublicPackageListItemVm>
 
@@ -43,6 +43,7 @@
             ? Url.Content("~/Content/img/packages-1.jpg")
             : Url.Content(path);
 }
+
 
 <style>
     /* --- Card & image layout to match template --- */
