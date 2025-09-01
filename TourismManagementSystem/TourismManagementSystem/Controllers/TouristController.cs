@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.Entity;
 using System.Linq;
 using System.Net;
@@ -31,7 +32,7 @@ namespace TourismManagementSystem.Controllers
 
         private static bool IsCompleted(Session s) => s.EndDate.Date < DateTime.Today;
 
-        private void RehydrateUpcomingSessions(PackageBookingVm model, int? packageIdOpt = null)
+        private void RehydrateUpcomingSessions_old(PackageBookingVm model, int? packageIdOpt = null)
         {
             int pkgId = packageIdOpt ?? model.PackageId;
 
@@ -101,29 +102,37 @@ namespace TourismManagementSystem.Controllers
             if (maxDays.HasValue) query = query.Where(p => p.DurationDays <= maxDays.Value);
 
             var model = query
-                .OrderBy(p => p.Title)
-                .Select(p => new PublicPackageListItemVm
-                {
-                    PackageId = p.PackageId,
-                    Title = p.Title,
-                    Price = p.Price,
-                    DurationDays = p.DurationDays,
-                    MaxGroupSize = p.MaxGroupSize,
-                    ThumbnailPath = p.Images.Any() ? p.Images.FirstOrDefault().ImagePath : "/images/placeholder.jpg",
-                    OwnerType = p.AgencyId != null ? "Agency" : "Guide",
-                    OwnerName = p.AgencyId != null ? p.Agency.User.FullName : p.Guide.User.FullName,
-                    HasUpcoming = p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today),
-                    AvgRating = p.Sessions
-                                 .SelectMany(s => s.Bookings)
-                                 .SelectMany(b => b.Feedbacks)
-                                 .Select(f => (double?)f.Rating)
-                                 .Average()
-                })
-                .ToList();
+       .OrderBy(p => p.Title)
+       .Select(p => new PublicPackageListItemVm
+       {
+           PackageId = p.PackageId,
+           Title = p.Title,
+           Price = p.Price,
+           DurationDays = p.DurationDays,
+           MaxGroupSize = p.MaxGroupSize,
+           ThumbnailPath = p.Images.Any()
+               ? p.Images.FirstOrDefault().ImagePath
+               : "/images/placeholder.jpg",
+           OwnerType = p.AgencyId != null ? "Agency" : "Guide",
+           OwnerName = p.AgencyId != null ? p.Agency.User.FullName : p.Guide.User.FullName,
+           HasUpcoming = p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today),
+           HasAvailableSession = p.Sessions.Any(s =>
+               DbFunctions.TruncateTime(s.StartDate) >= today &&
+               !s.IsCanceled &&
+               (s.Bookings.Sum(b => (int?)b.Participants) ?? 0) < s.Capacity
+           ),
+           AvgRating = p.Sessions
+                        .SelectMany(s => s.Bookings)
+                        .SelectMany(b => b.Feedbacks)
+                        .Select(f => (double?)f.Rating)
+                        .Average()
+       })
+       .ToList();
 
-            // Reuse the PublicPackage/Index view file (no controller dependency)
+
             return View("~/Views/PublicPackage/Index.cshtml", model);
         }
+
 
         // ---------- Package details (Tourist URL) ----------
         // GET /Tourist/Packages/Details/{id}
@@ -144,6 +153,7 @@ namespace TourismManagementSystem.Controllers
 
             if (p == null) return HttpNotFound();
 
+            // ensure only approved+active agency/guide
             var ownerApproved =
                 (p.AgencyId != null && p.Agency?.User?.IsApproved == true && p.Agency.User.IsActive) ||
                 (p.GuideId != null && p.Guide?.User?.IsApproved == true && p.Guide.User.IsActive);
@@ -151,10 +161,12 @@ namespace TourismManagementSystem.Controllers
 
             int currentUserId = GetCurrentTouristId();
 
+            // tourist’s existing booking for this package
             var existingBooking = p.Sessions
                 .SelectMany(s => s.Bookings)
                 .FirstOrDefault(b => b.TouristId == currentUserId);
 
+            // all reviews across sessions
             var reviewItems = p.Sessions
                 .SelectMany(s => s.Bookings)
                 .SelectMany(b => b.Feedbacks.Select(f => new PublicPackageDetailsVm.ReviewItem
@@ -167,6 +179,7 @@ namespace TourismManagementSystem.Controllers
 
             double? avgRating = reviewItems.Any() ? (double?)reviewItems.Average(r => r.Rating) : null;
 
+            // build main VM
             var vm = new PublicPackageDetailsVm
             {
                 PackageId = p.PackageId,
@@ -187,7 +200,6 @@ namespace TourismManagementSystem.Controllers
                         StartDate = s.StartDate,
                         EndDate = s.EndDate,
                         Capacity = s.Capacity,
-                        // approved-only seats
                         Booked = s.Bookings
                                   .Where(b => b.IsApproved == true)
                                   .Select(b => (int?)b.Participants)
@@ -200,13 +212,39 @@ namespace TourismManagementSystem.Controllers
                 ExistingBooking = existingBooking
             };
 
-            // Reuse the PublicPackage/Details view file
+            // tourist’s own bookings for THIS package (to show under "My Bookings")
+            if (currentUserId > 0)
+            {
+                var myBookings = p.Sessions
+                    .SelectMany(s => s.Bookings)
+                    .Where(b => b.TouristId == currentUserId)
+                    .Select(b => new PackageBookingVm
+                    {
+                        BookingId = b.BookingId,
+                        SessionId = b.SessionId,
+                        SelectedSessionDate = b.Session.StartDate,
+                        SelectedSessionEnd = b.Session.EndDate,
+                        Participants = b.Participants,
+                        Status = b.IsApproved == true ? "Approved"
+                                : b.IsApproved == false ? "Rejected"
+                                : "Pending",
+                        PaymentStatus = b.PaymentStatus
+                    })
+                    .ToList();
+
+                ViewBag.MyBookings = myBookings;
+            }
+
+            // reuse the PublicPackage/Details view file
             return View("~/Views/PublicPackage/Details.cshtml", vm);
         }
 
-        // ---------- Book (Tourist URL) ----------
+
+
+        // ================= GET ==================
         // GET /Tourist/Packages/Book?packageId=...&sessionId=...
         [HttpGet, Route("Packages/Book", Name = "TouristPackageBook")]
+        [Authorize(Roles = "Tourist")] // ensure only Tourists can book
         public ActionResult PackageBook(int packageId, int? sessionId)
         {
             ViewBag.ActivePage = "Packages";
@@ -227,7 +265,6 @@ namespace TourismManagementSystem.Controllers
                     StartDate = s.StartDate,
                     EndDate = s.EndDate,
                     Capacity = s.Capacity,
-                    // approved-only seats
                     Booked = s.Bookings
                               .Where(b => b.IsApproved == true)
                               .Select(b => (int?)b.Participants)
@@ -236,6 +273,7 @@ namespace TourismManagementSystem.Controllers
                 })
                 .ToList();
 
+            // Show seat availability in dropdown directly
             var vm = new PackageBookingVm
             {
                 PackageId = packageId,
@@ -245,12 +283,15 @@ namespace TourismManagementSystem.Controllers
                 UpcomingSessions = upcomingSessions
             };
 
-            // Reuse the PublicPackage/Book view file (form must post to Tourist route)
+            // Reuse the PublicPackage/Book view file (form posts to Tourist route)
             return View("~/Views/PublicPackage/Book.cshtml", vm);
         }
 
+
+        // ================= POST ==================
         // POST /Tourist/Packages/Book
         [HttpPost, ValidateAntiForgeryToken, Route("Packages/Book", Name = "TouristPackageBookPost")]
+        [Authorize(Roles = "Tourist")] // must be logged in as Tourist
         public ActionResult PackageBook(PackageBookingVm model)
         {
             ViewBag.ActivePage = "Packages";
@@ -274,7 +315,14 @@ namespace TourismManagementSystem.Controllers
             }
 
             var touristId = GetCurrentTouristId();
-            if (touristId <= 0) return new HttpStatusCodeResult(HttpStatusCode.Unauthorized);
+            if (touristId <= 0)
+            {
+                TempData["ErrorMessage"] = "Please log in as a Tourist to book.";
+                return RedirectToAction("Login", "Account", new
+                {
+                    returnUrl = Url.RouteUrl("TouristPackageBook", new { packageId = model.PackageId, sessionId = model.SelectedSessionId })
+                });
+            }
 
             int approvedSeats = session.Bookings
                 .Where(b => b.IsApproved == true)
@@ -282,13 +330,21 @@ namespace TourismManagementSystem.Controllers
                 .DefaultIfEmpty(0)
                 .Sum() ?? 0;
 
-            int available = session.Capacity - approvedSeats;
+            int availableSeats = session.Capacity - approvedSeats;
 
-            if (model.Participants > available)
+            if (model.Participants > availableSeats)
             {
-                ModelState.AddModelError("", $"Only {available} seat(s) are available for this session.");
+                ModelState.AddModelError("Participants", $"Only {availableSeats} seat(s) are available for this session.");
                 RehydrateUpcomingSessions(model, session.PackageId);
                 return View("~/Views/PublicPackage/Book.cshtml", model);
+            }
+
+            // Prevent double-booking the same session by the same tourist
+            var alreadyBooked = session.Bookings.Any(b => b.TouristId == touristId);
+            if (alreadyBooked)
+            {
+                TempData["ErrorMessage"] = "You have already booked this session.";
+                return RedirectToRoute("TouristPackageDetails", new { id = session.PackageId });
             }
 
             var booking = new Booking
@@ -296,8 +352,8 @@ namespace TourismManagementSystem.Controllers
                 TouristId = touristId,
                 SessionId = session.SessionId,
                 Participants = model.Participants,
-                Status = "Pending",
-                PaymentStatus = "Pending",
+                Status = "Pending",          // to be approved by Agency/Admin
+                PaymentStatus = "Pending",   // handled later
                 CustomerName = model.FullName,
                 CreatedAt = DateTime.UtcNow,
                 IsApproved = null
@@ -307,9 +363,158 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["SuccessMessage"] = "Booking created successfully!";
-            // IMPORTANT: redirect to Tourist route (not PublicPackage)
+
+            // Redirect to details page under Tourist route
             return RedirectToRoute("TouristPackageDetails", new { id = session.PackageId });
         }
+
+
+        // ================= Helper ==================
+        private void RehydrateUpcomingSessions(PackageBookingVm model, int? packageIdOpt = null)
+        {
+            int pkgId = packageIdOpt ?? model.PackageId;
+
+            var package = db.TourPackages
+                .Include(p => p.Sessions.Select(s => s.Bookings))
+                .FirstOrDefault(p => p.PackageId == pkgId);
+
+            if (package == null)
+            {
+                model.UpcomingSessions = new List<UpcomingSessionItem>();
+                return;
+            }
+
+            model.PackageTitle = package.Title;
+
+            model.UpcomingSessions = package.Sessions
+        .Where(s => s.StartDate >= DateTime.Today && !s.IsCanceled)
+        .OrderBy(s => s.StartDate)
+        .Select(s => new UpcomingSessionItem
+        {
+            SessionId = s.SessionId,
+            PackageTitle = package.Title,
+            StartDate = s.StartDate,
+            EndDate = s.EndDate,
+            Capacity = s.Capacity,
+            Booked = s.Bookings
+                      .Where(b => b.IsApproved == true)
+                      .Select(b => (int?)b.Participants)
+                      .DefaultIfEmpty(0)
+                      .Sum() ?? 0
+            // no need to set AvailableSeats
+        })
+        .ToList();
+
+        }
+
+
+
+        // ---------- Book (Tourist URL) ----------
+        // GET /Tourist/Packages/Book?packageId=...&sessionId=...
+        //[HttpGet, Route("Packages/Book", Name = "TouristPackageBook")]
+        //public ActionResult PackageBook(int packageId, int? sessionId)
+        //{
+        //    ViewBag.ActivePage = "Packages";
+        //    ViewBag.ActivePageGroup = "Tourist";
+
+        //    var package = db.TourPackages
+        //        .Include(p => p.Sessions.Select(s => s.Bookings))
+        //        .FirstOrDefault(p => p.PackageId == packageId);
+
+        //    if (package == null) return HttpNotFound();
+
+        //    var upcomingSessions = package.Sessions
+        //        .Where(s => s.StartDate >= DateTime.Today && !s.IsCanceled)
+        //        .OrderBy(s => s.StartDate)
+        //        .Select(s => new UpcomingSessionItem
+        //        {
+        //            SessionId = s.SessionId,
+        //            StartDate = s.StartDate,
+        //            EndDate = s.EndDate,
+        //            Capacity = s.Capacity,
+        //            // approved-only seats
+        //            Booked = s.Bookings
+        //                      .Where(b => b.IsApproved == true)
+        //                      .Select(b => (int?)b.Participants)
+        //                      .DefaultIfEmpty(0)
+        //                      .Sum() ?? 0
+        //        })
+        //        .ToList();
+
+        //    var vm = new PackageBookingVm
+        //    {
+        //        PackageId = packageId,
+        //        PackageTitle = package.Title,
+        //        Participants = 1,
+        //        SelectedSessionId = sessionId ?? upcomingSessions.FirstOrDefault()?.SessionId ?? 0,
+        //        UpcomingSessions = upcomingSessions
+        //    };
+
+        //    // Reuse the PublicPackage/Book view file (form must post to Tourist route)
+        //    return View("~/Views/PublicPackage/Book.cshtml", vm);
+        //}
+
+        // POST /Tourist/Packages/Book
+        //[HttpPost, ValidateAntiForgeryToken, Route("Packages/Book", Name = "TouristPackageBookPost")]
+        //public ActionResult PackageBook(PackageBookingVm model)
+        //{
+        //    ViewBag.ActivePage = "Packages";
+        //    ViewBag.ActivePageGroup = "Tourist";
+
+        //    if (!ModelState.IsValid)
+        //    {
+        //        RehydrateUpcomingSessions(model);
+        //        return View("~/Views/PublicPackage/Book.cshtml", model);
+        //    }
+
+        //    var session = db.Sessions
+        //                    .Include(s => s.Bookings)
+        //                    .FirstOrDefault(s => s.SessionId == model.SelectedSessionId && !s.IsCanceled);
+
+        //    if (session == null)
+        //    {
+        //        ModelState.AddModelError("", "The selected session does not exist or has been canceled.");
+        //        RehydrateUpcomingSessions(model);
+        //        return View("~/Views/PublicPackage/Book.cshtml", model);
+        //    }
+
+        //    var touristId = GetCurrentTouristId();
+        //    if (touristId <= 0) return new HttpStatusCodeResult(HttpStatusCode.Unauthorized);
+
+        //    int approvedSeats = session.Bookings
+        //        .Where(b => b.IsApproved == true)
+        //        .Select(b => (int?)b.Participants)
+        //        .DefaultIfEmpty(0)
+        //        .Sum() ?? 0;
+
+        //    int available = session.Capacity - approvedSeats;
+
+        //    if (model.Participants > available)
+        //    {
+        //        ModelState.AddModelError("", $"Only {available} seat(s) are available for this session.");
+        //        RehydrateUpcomingSessions(model, session.PackageId);
+        //        return View("~/Views/PublicPackage/Book.cshtml", model);
+        //    }
+
+        //    var booking = new Booking
+        //    {
+        //        TouristId = touristId,
+        //        SessionId = session.SessionId,
+        //        Participants = model.Participants,
+        //        Status = "Pending",
+        //        PaymentStatus = "Pending",
+        //        CustomerName = model.FullName,
+        //        CreatedAt = DateTime.UtcNow,
+        //        IsApproved = null
+        //    };
+
+        //    db.Bookings.Add(booking);
+        //    db.SaveChanges();
+
+        //    TempData["SuccessMessage"] = "Booking created successfully!";
+        //    // IMPORTANT: redirect to Tourist route (not PublicPackage)
+        //    return RedirectToRoute("TouristPackageDetails", new { id = session.PackageId });
+        //}
 
         // ---------- Edit booking ----------
         // GET /Tourist/Packages/Booking/Edit/{id}
@@ -504,7 +709,12 @@ namespace TourismManagementSystem.Controllers
                         IsCompleted = completed,
                         ExistingFeedbackId = existingFeedbackId,
                         CanReview = canReview,
-                        Amount = (b.Session.Package.Price * b.Participants)
+                        Amount = (b.Session.Package.Price * b.Participants),
+
+
+                     // If feedback exists, take first one
+                        Rating = b.Feedbacks.Select(f => (int?)f.Rating).FirstOrDefault(),
+                        Comment = b.Feedbacks.Select(f => f.Comment).FirstOrDefault()
                     };
                 })
                 .Where(vm => vm.IsCompleted)
@@ -516,7 +726,7 @@ namespace TourismManagementSystem.Controllers
         }
 
         // ---------- Create Review ----------
-        [HttpGet, Route("Review/Create/{bookingId:int}")]
+        [HttpGet, Route("Review/Create/{bookingId:int}", Name = "TouristCreateReview")]
         public ActionResult CreateReview(int bookingId)
         {
             var me = GetMe();
@@ -638,5 +848,9 @@ namespace TourismManagementSystem.Controllers
             TempData["Success"] = "Profile updated.";
             return RedirectToAction("Profile");
         }
+
+
+   
+
     }
 }

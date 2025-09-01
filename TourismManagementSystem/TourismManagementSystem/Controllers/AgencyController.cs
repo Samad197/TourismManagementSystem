@@ -332,6 +332,34 @@ namespace TourismManagementSystem.Controllers
         }
 
 
+        [Authorize(Roles = "Agency")]
+        public ActionResult Feedback()
+        {
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            var myAgencyKey = me.UserId;
+
+            var feedback = db.Feedbacks
+                             .Include(f => f.Booking.Session.Package)   // include related entities
+                             .Where(f => f.Booking.Session.Package.AgencyId == myAgencyKey)
+                             .OrderByDescending(f => f.CreatedAt)
+                             .Select(f => new FeedbackViewModel
+                             {
+                                 FeedbackId = f.FeedbackId,
+                                 CustomerName = f.Booking.CustomerName,      // from Booking
+                                 PackageTitle = f.Booking.Session.Package.Title, // from Package
+                                 Rating = f.Rating,
+                                 Comment = f.Comment,
+                                 CreatedAt = f.CreatedAt
+                             })
+                             .ToList();
+
+            ViewBag.ActivePage = "AgencyFeedback";
+            ViewBag.ActivePageGroup = "Agency";
+            return View(feedback);
+        }
+
 
 
 

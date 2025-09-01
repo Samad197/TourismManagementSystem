@@ -156,7 +156,7 @@ namespace TourismManagementSystem.Controllers
 
         // GET: /packages/book?packageId=2&sessionId=2
         [HttpGet, Route("book")]
-        [Authorize(Roles = "Tourist")] // optional but recommended
+        [Authorize(Roles = "Tourist")]
         public ActionResult Book(int packageId, int? sessionId)
         {
             ViewBag.ActivePage = "Packages";
@@ -168,6 +168,7 @@ namespace TourismManagementSystem.Controllers
 
             if (package == null) return HttpNotFound();
 
+            // Build upcoming sessions with capacity check
             var upcomingSessions = package.Sessions
                 .Where(s => s.StartDate >= DateTime.Today && !s.IsCanceled)
                 .OrderBy(s => s.StartDate)
@@ -178,19 +179,23 @@ namespace TourismManagementSystem.Controllers
                     EndDate = s.EndDate,
                     Capacity = s.Capacity,
                     Booked = s.Bookings
-                                  .Where(b => b.IsApproved == true)
-                                  .Select(b => (int?)b.Participants)
-                                  .DefaultIfEmpty(0)
-                                  .Sum() ?? 0
+                                .Where(b => b.IsApproved == true)
+                                .Select(b => (int?)b.Participants)
+                                .DefaultIfEmpty(0)
+                                .Sum() ?? 0
                 })
                 .ToList();
+
+            // Default session = first with seats left
+            var selectedSession = sessionId ??
+                                  upcomingSessions.FirstOrDefault(s => s.Capacity > s.Booked)?.SessionId ?? 0;
 
             var vm = new PackageBookingVm
             {
                 PackageId = packageId,
                 PackageTitle = package.Title,
                 Participants = 1,
-                SelectedSessionId = sessionId ?? upcomingSessions.FirstOrDefault()?.SessionId ?? 0,
+                SelectedSessionId = selectedSession,
                 UpcomingSessions = upcomingSessions
             };
 
@@ -198,15 +203,36 @@ namespace TourismManagementSystem.Controllers
         }
 
 
+
         // POST: /packages/book
         [HttpPost, ValidateAntiForgeryToken, Route("book")]
-        [Authorize(Roles = "Tourist")] // optional but recommended
+        [Authorize(Roles = "Tourist")] // recommended
         public ActionResult Book(PackageBookingVm model)
         {
-            if (!ModelState.IsValid) return View(model);
-
             ViewBag.ActivePage = "Packages";
             ViewBag.ActivePageGroup = "Packages";
+
+            if (!ModelState.IsValid)
+            {
+                // reload sessions for dropdown if validation fails
+                model.UpcomingSessions = db.Sessions
+                    .Where(s => s.PackageId == model.PackageId && s.StartDate >= DateTime.Today && !s.IsCanceled)
+                    .OrderBy(s => s.StartDate)
+                    .Select(s => new UpcomingSessionItem
+                    {
+                        SessionId = s.SessionId,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        Capacity = s.Capacity,
+                        Booked = s.Bookings.Where(b => b.IsApproved == true)
+                                           .Select(b => (int?)b.Participants)
+                                           .DefaultIfEmpty(0)
+                                           .Sum() ?? 0
+                    })
+                    .ToList();
+
+                return View(model);
+            }
 
             var session = db.Sessions
                 .Include(s => s.Bookings)
@@ -215,6 +241,24 @@ namespace TourismManagementSystem.Controllers
             if (session == null)
             {
                 ModelState.AddModelError("", "The selected session does not exist or has been canceled.");
+
+                // repopulate sessions
+                model.UpcomingSessions = db.Sessions
+                    .Where(s => s.PackageId == model.PackageId && s.StartDate >= DateTime.Today && !s.IsCanceled)
+                    .OrderBy(s => s.StartDate)
+                    .Select(s => new UpcomingSessionItem
+                    {
+                        SessionId = s.SessionId,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        Capacity = s.Capacity,
+                        Booked = s.Bookings.Where(b => b.IsApproved == true)
+                                           .Select(b => (int?)b.Participants)
+                                           .DefaultIfEmpty(0)
+                                           .Sum() ?? 0
+                    })
+                    .ToList();
+
                 return View(model);
             }
 
@@ -224,7 +268,7 @@ namespace TourismManagementSystem.Controllers
                 TempData["ErrorMessage"] = "Please log in as a Tourist to book.";
                 return RedirectToAction("Login", "Account", new
                 {
-                    returnUrl = Url.Action("Book", "PublicPackage", new { packageId = model.PackageId, sessionId = model.SelectedSessionId })
+                    returnUrl = Url.Action("Book", "Tourist", new { packageId = model.PackageId, sessionId = model.SelectedSessionId })
                 });
             }
 
@@ -237,7 +281,25 @@ namespace TourismManagementSystem.Controllers
 
             if (model.Participants > availableSeats)
             {
-                ModelState.AddModelError("", $"Only {availableSeats} seat(s) are available for this session.");
+                ModelState.AddModelError("Participants", $"Only {availableSeats} seat(s) are available for this session.");
+
+                // reload sessions again
+                model.UpcomingSessions = db.Sessions
+                    .Where(s => s.PackageId == model.PackageId && s.StartDate >= DateTime.Today && !s.IsCanceled)
+                    .OrderBy(s => s.StartDate)
+                    .Select(s => new UpcomingSessionItem
+                    {
+                        SessionId = s.SessionId,
+                        StartDate = s.StartDate,
+                        EndDate = s.EndDate,
+                        Capacity = s.Capacity,
+                        Booked = s.Bookings.Where(b => b.IsApproved == true)
+                                           .Select(b => (int?)b.Participants)
+                                           .DefaultIfEmpty(0)
+                                           .Sum() ?? 0
+                    })
+                    .ToList();
+
                 return View(model);
             }
 
@@ -257,8 +319,11 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["SuccessMessage"] = "Booking created successfully!";
-            return RedirectToAction("Details", new { id = session.PackageId });
+
+            // ✅ redirect to tourist-friendly detail page
+            return RedirectToRoute("TouristPackageDetails", new { id = session.PackageId });
         }
+
 
 
 

@@ -21,27 +21,38 @@
     bool isAuth = User?.Identity?.IsAuthenticated ?? false;
     bool isTourist = isAuth && User.IsInRole("Tourist");
 
+    //var sessionItems = (Model.UpcomingSessions ?? Enumerable.Empty<dynamic>())
+    //    .Select(s => new SelectListItem
+    //    {
+    //        Value = s.SessionId.ToString(),
+    //        Text = (s.StartDate is DateTime dt) ? dt.ToString("MMM dd, yyyy • HH:mm") : s.StartDate.ToString()
+    //    })
+    //    .ToList();
+
     var sessionItems = (Model.UpcomingSessions ?? Enumerable.Empty<dynamic>())
-        .Select(s => new SelectListItem
-        {
-            Value = s.SessionId.ToString(),
-            Text = (s.StartDate is DateTime dt) ? dt.ToString("MMM dd, yyyy • HH:mm") : s.StartDate.ToString()
-        })
-        .ToList();
+    .Select(s => new SelectListItem
+    {
+        Value = s.SessionId.ToString(),
+        Text = $"{s.StartDate:dd MMM yyyy} – {s.EndDate:dd MMM yyyy} • Seats Left: {s.Capacity - s.Booked}"
+    })
+    .ToList();
+
+
+
 
     // Where to POST:
     //  - Tourists → /Tourist/Packages/Book (POST)
     //  - Public/Anonymous → Login (with returnUrl back to this Book page)
     var bookPostUrl = isTourist
-        ? Url.RouteUrl("TouristPackageBookPost")
-        : Url.Action("Login", "Account", new
-        {
-            returnUrl = Url.RouteUrl("TouristPackageBook", new
-            {
-                packageId = Model.PackageId,
-                sessionId = Model.SelectedSessionId
-            })
-        });
+? Url.RouteUrl("TouristPackageBookPost")
+: Url.Action("Login", "Account", new
+{
+    returnUrl = Url.RouteUrl("TouristPackageBook", new
+    {
+        packageId = Model.PackageId,
+        sessionId = Model.SelectedSessionId
+    })
+});
 
     // Use tourist-friendly URLs for navigation when logged-in as Tourist
     var packagesUrl = isTourist
@@ -161,21 +172,57 @@
                                 </div>
                             </div>
 
+                            @*<div class="col-md-6">
+            <div class="form-floating">
+                @Html.TextBoxFor(m => m.Participants, new { @class = "form-control bg-white", placeholder = "Participants", type = "number", min = "1", max = "100" })
+                @Html.LabelFor(m => m.Participants, "Participants")
+                @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-warning small" })
+            </div>
+        </div>*@
+
                             <div class="col-md-6">
                                 <div class="form-floating">
-                                    @Html.TextBoxFor(m => m.Participants, new { @class = "form-control bg-white", placeholder = "Participants", type = "number", min = "1", max = "100" })
+                                    @Html.TextBoxFor(m => m.Participants, new
+                                    {
+                                        @class = "form-control bg-white",
+                                        type = "number",
+                                        min = "1",
+                                        max = "100",
+                                        placeholder = "Participants",
+                                        id = "Participants"
+                                    })
                                     @Html.LabelFor(m => m.Participants, "Participants")
+                                    <div id="capacityHint" class="small text-warning mt-1"></div>
                                     @Html.ValidationMessageFor(m => m.Participants, "", new { @class = "text-warning small" })
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
+
+                            @*<div class="col-md-6">
                                 <div class="form-floating">
                                     @Html.DropDownListFor(m => m.SelectedSessionId, sessionItems, "Select a session", new { @class = "form-select bg-white", id = "SelectedSessionId" })
                                     @Html.LabelFor(m => m.SelectedSessionId, "Select Session")
                                     @Html.ValidationMessageFor(m => m.SelectedSessionId, "", new { @class = "text-warning small" })
                                 </div>
+                            </div>*@
+
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.DropDownListFor(m => m.SelectedSessionId,
+                                        Model.UpcomingSessions.Select(s => new SelectListItem
+                                        {
+                                            Value = s.SessionId.ToString(),
+                                            Text = $"{s.StartDate:dd MMM yyyy} – {s.EndDate:dd MMM yyyy} ({s.AvailableSeats} seats left)"
+                                        }),
+                                        "Select a session",
+                                        new { @class = "form-select bg-white", id = "SelectedSessionId" })
+
+                                    @Html.LabelFor(m => m.SelectedSessionId, "Select Session")
+                                    @Html.ValidationMessageFor(m => m.SelectedSessionId, "", new { @class = "text-warning small" })
+                                </div>
                             </div>
+
 
                             <div class="col-12">
                                 <button class="btn btn-primary text-white w-100 py-3" type="submit">Book Now</button>
@@ -196,4 +243,36 @@
         border-radius: 0.75rem;
     }
 </style>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const participantsInput = document.getElementById("Participants");
+    const sessionSelect = document.getElementById("SelectedSessionId");
+    const hint = document.getElementById("capacityHint");
+
+    // Example: attach session capacities to dropdown items via data-attr
+    const sessionCapacities = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(
+        Model.UpcomingSessions.Select(s => new {
+            id = s.SessionId,
+            available = s.Capacity - s.Booked
+        })
+    ));
+
+    function updateHint() {
+        const selectedId = parseInt(sessionSelect.value);
+        const session = sessionCapacities.find(s => s.id === selectedId);
+        if (session) {
+            hint.textContent = `Seats available: ${session.available}`;
+            participantsInput.max = session.available; // enforce max
+        } else {
+            hint.textContent = "";
+            participantsInput.max = 100;
+        }
+    }
+
+    sessionSelect.addEventListener("change", updateHint);
+    updateHint();
+});
+</script>
+
 

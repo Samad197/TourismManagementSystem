@@ -20,7 +20,12 @@ namespace TourismManagementSystem.Models.ViewModels
         public bool CanReview { get; set; }
         public int? ExistingFeedbackId { get; set; }
         public decimal? Amount { get; set; }
+
+        // NEW: Review content
+        public int? Rating { get; set; }
+        public string Comment { get; set; }
     }
+
 
     public class TouristProfileVm
     {

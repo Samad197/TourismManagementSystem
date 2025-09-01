@@ -221,14 +221,31 @@ string.Equals(ViewBag.ActivePage as string, name, System.StringComparison.Ordina
                         @*<a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Packages</a>*@
 
                         @* Tourist extras *@
-                        if (isAuth && isTourist)
+                        @*if (isAuth && isTourist)
                         {
 
                             <a href="@Url.RouteUrl("TouristPackages")" class="nav-item nav-link @active("Packages")">Tourist Packages</a>
                             <a href="@Url.Action("MyBookings","Tourist")" class="nav-item nav-link @active("MyBookings")">My Bookings</a>
                             <a href="@Url.Action("History","Tourist")" class="nav-item nav-link @active("History")">History</a>
                             <a href="@Url.Action("Profile","Tourist")" class="nav-item nav-link @active("TouristProfile")">Profile</a>
+                        }*@
+
+                        if (isAuth && isTourist)
+                        {
+                            <a href="@Url.RouteUrl("TouristPackages")" class="nav-item nav-link @active("Packages")">Packages</a>
+
+                            <div class="nav-item dropdown">
+                                <a href="#" class="nav-link dropdown-toggle @active("Bookings,History")" data-bs-toggle="dropdown">Bookings</a>
+                                <div class="dropdown-menu">
+                                    <a href="@Url.Action("MyBookings","Tourist")" class="dropdown-item">My Bookings</a>
+                                    <a href="@Url.Action("History","Tourist")" class="dropdown-item">Booking History</a>
+                                </div>
+                            </div>
+
+                            <a href="@Url.Action("Profile","Tourist")" class="nav-item nav-link @active("TouristProfile")">Profile</a>
                         }
+
+
                         else
                         {
                             <a href="@Url.Action("Index","PublicPackage")" class="nav-item nav-link @active("Packages")">Public Packages</a>

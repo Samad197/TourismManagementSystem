@@ -32,38 +32,41 @@
     {<div class="alert alert-danger">@TempData["Error"]</div>}
 
     <!-- KPI Cards -->
-    <div class="row g-3 mb-3">
-        <div class="col-md-2">
-            <div class="card shadow-sm text-center p-3">
-                <div class="fw-bold">Packages</div>
-                <div class="display-6">@Model.TotalPackages</div>
-            </div>
+<div class="row g-3 mb-3">
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <div class="fw-bold">Packages</div>
+            <div class="display-6">@Model.TotalPackages</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm text-center p-3">
-                <div class="fw-bold">Upcoming</div>
-                <div class="display-6">@Model.UpcomingSessions</div>
-            </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <div class="fw-bold">Upcoming</div>
+            <div class="display-6">@Model.UpcomingSessions</div>
         </div>
-        <div class="col-md-2">
-            <div class="card shadow-sm text-center p-3">
-                <div class="fw-bold">Bookings</div>
-                <div class="display-6">@Model.TotalBookings</div>
-            </div>
+    </div>
+    <div class="col-md-2">
+        <div class="card shadow-sm text-center p-3">
+            <div class="fw-bold">Bookings</div>
+            <div class="display-6">@Model.TotalBookings</div>
         </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm text-center p-3">
-                <div class="fw-bold">Paid Revenue</div>
-                <div class="h4" id="kpiPaidRevenue">@Model.PaidRevenue.ToString("C")</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card shadow-sm text-center p-3">
-                <div class="fw-bold">Pending Payments</div>
-                <div class="display-6" id="kpiPendingPayments">@Model.PendingPayments</div>
+    </div>
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center p-3">
+            <div class="fw-bold">Paid Revenue</div>
+            <div class="h4" id="kpiPaidRevenue">
+                @Model.PaidRevenue.ToString("C", new System.Globalization.CultureInfo("en-AU"))
             </div>
         </div>
     </div>
+
+    <div class="col-md-3">
+        <div class="card shadow-sm text-center p-3">
+            <div class="fw-bold">Pending Payments</div>
+            <div class="display-6" id="kpiPendingPayments">@Model.PendingPayments</div>
+        </div>
+    </div>
+</div>
 
     <!-- Quick Actions -->
     <div class="mb-4 d-flex flex-wrap gap-2">
@@ -141,9 +144,9 @@
                                         <th>Customer</th>
                                         <th>Package</th>
                                         <th>Date</th>
-                                        <th class="text-center">Guests</th>
+                                        <th class="text-center">Participants</th>
                                         <th class="text-center">Payment</th>
-                                        <th class="text-end">Amount</th>
+                                        @*<th class="text-end">Amount</th>*@
                                         <th class="text-center">Status</th>
                                         <th class="text-center">Actions</th>
                                     </tr>
@@ -162,15 +165,19 @@
                                             <!-- Payment badge -->
                                             <td class="text-center">
                                                 <span class="badge payment-badge @(ps.Equals("Paid", StringComparison.OrdinalIgnoreCase) ? "bg-success"
-                                : ps.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "bg-secondary"
-                                : "bg-warning text-dark")"
+        : ps.Equals("Pending", StringComparison.OrdinalIgnoreCase) ? "bg-secondary"
+        : "bg-warning text-dark")"
                                                       data-bookingid="@b.BookingId"
                                                       data-status="@ps">
                                                     @ps
                                                 </span>
                                             </td>
 
-                                            <td class="text-end">@b.Amount.ToString("C")</td>
+
+                                            @*<td class="text-end">
+                                                @b.Amount.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+                                            </td>*@
+
 
                                             <!-- Approval status -->
                                             <td class="text-center approval-col">

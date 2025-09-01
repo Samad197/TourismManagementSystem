@@ -1,48 +1,78 @@
 ﻿@model TourismManagementSystem.Models.ViewModels.CreateReviewVm
 @{
-    ViewBag.Title = "Leave a Review";
+    ViewBag.Title = "Leave Feedback";
+    Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
+<!-- Header Start -->
 <div class="container-fluid bg-breadcrumb">
-    <div class="container text-center py-5" style="max-width:900px;">
-        <h3 class="text-white display-3 mb-2">Leave a Review</h3>
-        <p class="text-white-50 mb-0">@Model.PackageTitle — @Model.SessionStart.ToString("yyyy-MM-dd")</p>
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">Leave Feedback</h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            <li class="breadcrumb-item active text-white">Leave Feedback</li>
+        </ol>
     </div>
 </div>
+<!-- Header End -->
 
-<div class="container py-4" style="max-width: 760px;">
+<div class="container mt-4">
+    <h3 class="mb-3">Rate Your Experience with <strong>@Model.PackageTitle</strong></h3>
+    <p class="text-muted">Session started on @Model.SessionStart.ToString("dd MMM yyyy")</p>
+
     @using (Html.BeginForm("CreateReview", "Tourist", FormMethod.Post))
     {
         @Html.AntiForgeryToken()
         @Html.HiddenFor(m => m.BookingId)
-        @Html.HiddenFor(m => m.PackageId)
-        @Html.HiddenFor(m => m.PackageTitle)
-        @Html.HiddenFor(m => m.SessionStart)
+        @Html.HiddenFor(m => m.Rating, new { id = "Rating" }) <!-- will be set by stars -->
 
-        @Html.ValidationSummary(false, "", new { @class = "alert alert-warning" })
-
-        <div class="card shadow-sm">
-            <div class="card-body">
-                <div class="mb-3">
-                    @Html.LabelFor(m => m.Rating, new { @class = "form-label" })
-                    @Html.DropDownListFor(m => m.Rating,
-                        new SelectList(new[] { 1, 2, 3, 4, 5 }),
-                        "-- Select Rating (1-5) --",
-                        new { @class = "form-select" })
-                    @Html.ValidationMessageFor(m => m.Rating, "", new { @class = "text-danger" })
-                </div>
-
-                <div class="mb-3">
-                    @Html.LabelFor(m => m.Comment, new { @class = "form-label" })
-                    @Html.TextAreaFor(m => m.Comment, 6, 50, new { @class = "form-control", placeholder = "Share your experience..." })
-                    @Html.ValidationMessageFor(m => m.Comment, "", new { @class = "text-danger" })
-                </div>
-
-                <div class="d-flex justify-content-between">
-                    <a href="@Url.Action("History","Tourist")" class="btn btn-outline-secondary">Cancel</a>
-                    <button type="submit" class="btn btn-primary">Submit Review</button>
-                </div>
+        <!-- Star Rating -->
+        <div class="mb-3">
+            <label class="form-label">Your Rating</label>
+            <div id="starRating" class="mb-2">
+                @for (int i = 1; i <= 5; i++)
+                {
+                    <i class="fa fa-star star-select text-secondary fs-3 me-1" data-value="@i"></i>
+                }
             </div>
+            @Html.ValidationMessageFor(m => m.Rating, "", new { @class = "text-danger" })
         </div>
+
+        <!-- Comment -->
+        <div class="mb-3">
+            @Html.LabelFor(m => m.Comment, "Your Comment")
+            @Html.TextAreaFor(m => m.Comment, new { @class = "form-control", rows = 4, placeholder = "Share your experience..." })
+            @Html.ValidationMessageFor(m => m.Comment, "", new { @class = "text-danger" })
+        </div>
+
+        <button type="submit" class="btn btn-primary">Submit Review</button>
+        <a href="@Url.Action("History","Tourist")" class="btn btn-secondary">Cancel</a>
     }
 </div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const stars = document.querySelectorAll(".star-select");
+            const hiddenRating = document.getElementById("Rating");
+
+            stars.forEach(star => {
+                star.addEventListener("click", function () {
+                    const rating = this.getAttribute("data-value");
+                    hiddenRating.value = rating;
+
+                    // highlight selected stars
+                    stars.forEach(s => {
+                        if (s.getAttribute("data-value") <= rating) {
+                            s.classList.remove("text-secondary");
+                            s.classList.add("text-warning");
+                        } else {
+                            s.classList.remove("text-warning");
+                            s.classList.add("text-secondary");
+                        }
+                    });
+                });
+            });
+        });
+    </script>
+}

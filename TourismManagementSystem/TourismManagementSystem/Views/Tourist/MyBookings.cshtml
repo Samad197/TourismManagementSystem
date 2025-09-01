@@ -23,16 +23,15 @@
     else
     {
         <div class="table-responsive">
-            <table class="table table-striped align-middle">
+            <table id="tblTouristBookings" class="table table-striped align-middle">
                 <thead class="table-light">
                     <tr>
                         <th>Package</th>
                         <th>Start</th>
-                        <th>Pax</th>
+                        <th>Participants</th>
                         <th>Status</th>
                         <th>Payment</th>
-                        <th>Amount</th>
-                        <th></th>
+                        <th class="text-end">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,20 +43,37 @@
                             <td>@b.Participants</td>
                             <td>
                                 @if (b.IsApproved == null)
-                                {<span class="badge bg-warning text-dark">Pending</span> }
+                                {<span class="badge bg-warning text-dark">Pending</span>}
                                 else if (b.IsApproved == true)
-                                { <span class="badge bg-success">Approved</span> }
+                                {<span class="badge bg-success">Approved</span>}
                                 else
-                                { <span class="badge bg-danger">Rejected</span>}
+                                {<span class="badge bg-danger">Rejected</span>}
                             </td>
-                            <td><span class="badge @(b.PaymentStatus=="Paid"?"bg-success":"bg-secondary")">@b.PaymentStatus</span></td>
-                            <td>@(b.Amount?.ToString("C") ?? "-")</td>
+                            <td>
+                                <span class="badge @(b.PaymentStatus=="Paid" ? "bg-success" : "bg-secondary")">
+                                    @b.PaymentStatus
+                                </span>
+                            </td>
                             <td class="text-end">
                                 <a class="btn btn-sm btn-outline-primary"
                                    href="@Url.RouteUrl("TouristPackageDetails", new { id = b.PackageId })">
                                     View Package
                                 </a>
+
+                                @if (b.CanReview)
+                                {
+                                    <a class="btn btn-sm btn-outline-success"
+                                       href="@Url.Action("CreateReview", "Tourist", new { bookingId = b.BookingId })">
+                                        Leave Feedback
+                                    </a>
+                                }
+                                else if (b.ExistingFeedbackId.HasValue)
+                                {
+                                    <span class="badge bg-info"
+                                          title="Rating: @b.Rating / 5 - @b.Comment">Reviewed</span>
+                                }
                             </td>
+
 
                         </tr>
                     }
@@ -66,3 +82,29 @@
         </div>
     }
 </div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(function () {
+            $('#tblTouristBookings').DataTable({
+                pageLength: 10,
+                lengthMenu: [5, 10, 20, 50],
+                ordering: true,
+                responsive: true,
+                columnDefs: [
+                    { orderable: false, targets: [5] } // disable sorting on Actions column
+                ],
+                language: {
+                    search: "Search bookings:",
+                    lengthMenu: "Show _MENU_ bookings",
+                    info: "Showing _START_ to _END_ of _TOTAL_ bookings"
+                }
+            });
+        });
+    </script>
+}

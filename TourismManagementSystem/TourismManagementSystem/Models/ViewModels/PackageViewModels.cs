@@ -17,7 +17,9 @@ namespace TourismManagementSystem.Models.ViewModels
         public string OwnerType { get; set; }     // "Agency" / "Guide"
         public string OwnerName { get; set; }
         public double? AvgRating { get; set; }
-        public bool HasUpcoming { get; set; }
+
+        public bool HasUpcoming { get; set; }          // shows in future
+        public bool HasAvailableSession { get; set; }  // available for booking
     }
 
     // Public details page
@@ -51,6 +53,7 @@ namespace TourismManagementSystem.Models.ViewModels
         [Display(Name = "Hero Image")]
         public string HeroImagePath { get; set; }
 
+      
         public List<string> Gallery { get; set; } // multiple images
 
         public List<UpcomingSessionItem> UpcomingSessions { get; set; }
@@ -70,6 +73,8 @@ namespace TourismManagementSystem.Models.ViewModels
             public string TouristName { get; set; }
             public int Rating { get; set; }
             public string Comment { get; set; }
+
+            public DateTime CreatedAt { get; set; }
         }
     }
 
@@ -134,6 +139,8 @@ namespace TourismManagementSystem.Models.ViewModels
 
         [Required, EmailAddress]
         public string Email { get; set; }
+        public int SessionId { get; set; }   // ✅ NEW, helps when you need to link back to the session
+
 
         [Required]
         [Range(1, 100, ErrorMessage = "Participants must be between 1 and 100")]

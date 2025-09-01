@@ -143,12 +143,14 @@
     <div class="container py-5">
         <div class="mx-auto text-center mb-5" style="max-width: 900px;">
             <h5 class="section-title px-3">Packages</h5>
-            <h1 class="mb-0">Awesome Packages</h1>
+            <h1 class="mb-0">Available  Packages</h1>
         </div>
 
         @if (Model == null || !Model.Any())
         {
-            <div class="alert alert-warning text-center">No packages are available right now. Please check back soon.</div>
+            <div class="alert alert-warning text-center">
+                No packages are available right now. Please check back soon.
+            </div>
         }
         else
         {
@@ -161,6 +163,7 @@
                         <div class="packages-img">
                             <img src="@img" alt="@pkg.Title" class="img-fluid w-100 rounded-top" />
 
+                            <!-- Package Info -->
                             <div class="packages-info d-flex border border-start-0 border-end-0 position-absolute">
                                 <small class="flex-fill text-center border-end py-2">
                                     <i class="fa fa-user-tie me-2"></i>@pkg.OwnerName (@pkg.OwnerType)
@@ -173,8 +176,9 @@
                                 </small>
                             </div>
 
+                            <!-- Price -->
                             <div class="packages-price py-2 px-3">
-                                @pkg.Price.ToString("C")
+                                @pkg.Price.ToString("C", new System.Globalization.CultureInfo("en-AU"))
                             </div>
                         </div>
 
@@ -182,17 +186,31 @@
                             <div class="p-4 pb-0">
                                 <h5 class="mb-0">@pkg.Title</h5>
                                 <small class="text-uppercase">
-                                    @(pkg.HasUpcoming ? "Upcoming Sessions Available" : "No Upcoming Sessions")
+                                    @if (pkg.HasAvailableSession)
+                                    {
+                                        @:Available to Book
+                                    }
+                                    else if (pkg.HasUpcoming)
+                                    {
+                                        @:Fully Booked
+                                    }
+                                    else
+                                    {
+                                        @:No Upcoming Sessions
+                                    }
                                 </small>
 
-                                @* Optional: ratings if you have AvgRating (0–5)
-                                    <div class="mb-3 mt-2">
-                                        @{
-                                            // var full = (int)Math.Round(pkg.AvgRating ?? 0);
-                                            // for (int i = 0; i < 5; i++)
-                                            // { <small class="fa fa-star @(i < full ? "star" : "star-muted")"></small> }
-                                        }
-                                    </div>
+                                <!-- Optional ratings -->
+                                @*
+            <div class="mb-3 mt-2">
+                @{
+                    var full = (int)Math.Round(pkg.AvgRating ?? 0);
+                    for (int i = 0; i < 5; i++)
+                    {
+                        <small class="fa fa-star @(i < full ? "star" : "star-muted")"></small>
+                    }
+                }
+            </div>
                                 *@
 
                                 <p class="mb-4 mt-2 small text-muted">
@@ -201,14 +219,25 @@
                                 </p>
                             </div>
 
+                            <!-- Actions -->
                             <div class="actions-bar row bg-primary rounded-bottom mx-0">
-                                <div class="col-6 text-start px-0">
-                                    <a href="@detailsUrl(pkg.PackageId)" class="btn-hover btn text-white py-2 px-4">Read More</a>
-                                </div>
-                                <div class="col-6 text-end px-0">
-                                    <a href="@bookEntryUrl(pkg.PackageId)" class="btn-hover btn text-white py-2 px-4">Book Now</a>
+                                <div class="col-12 text-center px-0">
+                                    @if (pkg.HasAvailableSession)
+                                    {
+                                        <a href="@bookEntryUrl(pkg.PackageId)"
+                                           class="btn-hover btn text-white py-2 px-4">Book Now</a>
+                                    }
+                                    else if (pkg.HasUpcoming)
+                                    {
+                                        <span class="btn btn-danger text-white py-2 px-4 disabled">Fully Booked</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="btn btn-secondary text-white py-2 px-4 disabled">No Sessions</span>
+                                    }
                                 </div>
                             </div>
+
                         </div>
                     </div>
                 }
@@ -217,6 +246,7 @@
     </div>
 </div>
 <!-- Packages End -->
+
 
 
 @section scripts {

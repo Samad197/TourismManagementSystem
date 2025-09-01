@@ -65,8 +65,15 @@
         ? Url.Content("~/Content/img/packages-1.jpg")
         : Url.Content(Model.HeroImagePath);
 
-    Func<decimal?, string> money = v => (v ?? 0m).ToString("C");
+    //Func<decimal?, string> money = v => (v ?? 0m).ToString("C");
+    Func<decimal?, string> money = v => string.Format(new System.Globalization.CultureInfo("en-AU"), "{0:C}", v ?? 0m);
+
 }
+<style>
+    .badge.bg-danger {
+        color: #fff !important;
+    }
+</style>
 
 <!-- Header Start -->
 @*<div class="container-fluid bg-breadcrumb">
@@ -177,10 +184,10 @@
             <div class="card shadow-sm mb-4 p-3">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3 class="mb-0">Upcoming Sessions</h3>
-                    @if (Model.UpcomingSessions != null && Model.UpcomingSessions.Any())
-                    {
-                        <small class="text-muted">Select a date to book</small>
-                    }
+                    @*@if (Model.UpcomingSessions != null && Model.UpcomingSessions.Any())
+                {
+                    <small class="text-muted">Select a date to book</small>
+                }*@
                 </div>
 
                 @if (Model.UpcomingSessions == null || !Model.UpcomingSessions.Any())
@@ -206,7 +213,14 @@
                                     <tr>
                                         <td>@session.StartDate.ToString("dd MMM yyyy")</td>
                                         <td>@session.EndDate.ToString("dd MMM yyyy")</td>
-                                        <td>@available</td>
+                                        <td>
+                                            <span class="badge @(available <= 0 ? "bg-danger"
+                      : available < 5 ? "bg-warning text-dark"
+                      : "bg-success")">
+                                                @available
+                                            </span>
+                                        </td>
+
                                         <td class="text-center">
                                             @if (Model.ExistingBooking != null && Model.ExistingBooking.SessionId == session.SessionId)
                                             {
@@ -214,7 +228,8 @@
                                             }
                                             else if (available <= 0)
                                             {
-                                                <span class="badge bg-danger">Full</span>
+                                                <span class="badge bg-danger text-white">Full</span>
+
                                             }
                                             else
                                             {
@@ -256,21 +271,24 @@
                     foreach (var review in Model.Reviews)
                     {
                         <div class="mb-3 border-bottom pb-2">
-                            <p class="mb-1"><strong>@review.TouristName</strong> — @review.Rating / 5</p>
-                            <p class="mb-0">@review.Comment</p>
+                            <p class="mb-1">
+                                <strong>@review.TouristName</strong>
+                                <span class="text-warning">
+                                    @for (int i = 1; i <= 5; i++)
+                                    {
+                                        <i class="fa fa-star@(i <= review.Rating ? "" : "-o")"></i>
+                                    }
+                                </span>
+                                <small class="text-muted">(@review.Rating / 5)</small>
+                            </p>
+                            <p class="mb-1">@review.Comment</p>
+                            <small class="text-muted">Posted on @review.CreatedAt.ToString("dd MMM yyyy")</small>
                         </div>
                     }
                 }
-                @* If you later enable review creation, you can show a button for eligible tourists here *@
-                @* Example (requires controller logic to check eligibility):
-            @if (isTourist && (ViewBag.CanReview as bool? ?? false))
-            {
-                <a class="btn btn-outline-primary btn-sm mt-2" href="@Url.Action("CreateReview","Tourist", new { packageId = Model.PackageId })">
-                    Write a Review
-                </a>
-            }
-                *@
             </div>
+
+
 
             <!-- My Bookings (Tourist only) -->
             @if (isTourist)
@@ -298,7 +316,7 @@
                                     @if (booking.PaymentStatus == "Paid")
                                     {<span class="badge bg-success">Paid</span> }
                                     else
-                                    { <span class="badge bg-secondary">Pending by Admin</span>}
+                                    { <span class="badge bg-secondary">Pending</span>}
                                 </p>
                             </div>
                         }
