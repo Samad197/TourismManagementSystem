@@ -71,8 +71,75 @@ namespace TourismManagementSystem.Controllers
             return View(profile);
         }
 
+
         [HttpPost, ValidateAntiForgeryToken]
-        public ActionResult Profile(AgencyProfile form)
+        public ActionResult Profile(AgencyProfile form, string OwnerName)
+        {
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            var profile = db.AgencyProfiles
+                            .Include(p => p.User)
+                            .FirstOrDefault(p => p.UserId == me.UserId);
+
+            if (profile == null)
+            {
+                profile = new AgencyProfile
+                {
+                    UserId = me.UserId,
+                    Status = "PendingVerification"
+                };
+                db.AgencyProfiles.Add(profile);
+            }
+
+            // Validation
+            if (string.IsNullOrWhiteSpace(form.AgencyName))
+                ModelState.AddModelError("AgencyName", "Agency Name is required.");
+
+            if (string.IsNullOrWhiteSpace(OwnerName))
+                ModelState.AddModelError("OwnerName", "Owner / Contact Person is required.");
+
+            if (!ModelState.IsValid)
+            {
+                profile.User = me;
+                profile.AgencyName = form.AgencyName;
+                profile.Description = form.Description;
+                profile.Phone = form.Phone;
+                profile.Website = form.Website;
+                profile.VerificationDocPath = form.VerificationDocPath;
+
+                ViewBag.ActivePage = "Profile";
+                ViewBag.ActivePageGroup = "Agency";
+                return View(profile);
+            }
+
+            // ✅ Update agency profile
+            profile.AgencyName = form.AgencyName?.Trim();
+            profile.Description = form.Description;
+            profile.Phone = form.Phone;
+            profile.Website = form.Website;
+            profile.VerificationDocPath = form.VerificationDocPath;
+
+            // ✅ Update owner name
+            if (profile.User == null) profile.User = db.Users.Find(me.UserId);
+            if (profile.User != null && !string.IsNullOrWhiteSpace(OwnerName))
+                profile.User.FullName = OwnerName.Trim();
+
+            db.SaveChanges();
+
+            if (!me.IsApproved)
+            {
+                TempData["Success"] = "Profile saved. Your account is still pending admin approval.";
+                return RedirectToAction("Profile");
+            }
+
+            TempData["Success"] = "Profile updated.";
+            return RedirectToAction("Dashboard");
+        }
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ProfileOld(AgencyProfile form)
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
@@ -363,131 +430,6 @@ namespace TourismManagementSystem.Controllers
 
 
 
-
-
-
-
-
-        //[HttpPost, ValidateAntiForgeryToken]
-        //public ActionResult ApproveBooking(int bookingId)
-        //{
-        //    var me = GetMe();
-        //    if (me == null) return RedirectToAction("Login", "Account");
-
-        //    var booking = db.Bookings
-        //                    .Include(b => b.Session.Package)
-        //                    .FirstOrDefault(b => b.BookingId == bookingId);
-
-        //    if (booking == null) return HttpNotFound();
-        //    if (booking.Session.Package.AgencyId != me.UserId)
-        //        return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
-
-        //    booking.IsApproved = true;
-        //    booking.Status = "Approved";
-
-        //    try
-        //    {
-        //        db.SaveChanges();
-        //        TempData["Success"] = "Booking approved successfully!";
-        //    }
-        //    catch (System.Data.Entity.Validation.DbEntityValidationException ex)
-        //    {
-        //        var msgs = ex.EntityValidationErrors
-        //                     .SelectMany(e => e.ValidationErrors)
-        //                     .Select(e => e.ErrorMessage);
-        //        TempData["Error"] = "Validation failed: " + string.Join("; ", msgs);
-        //    }
-
-        //    return RedirectToAction("Dashboard");
-        //}
-
-        //[HttpPost, ValidateAntiForgeryToken]
-        //public ActionResult RejectBooking(int bookingId)
-        //{
-        //    var me = GetMe();
-        //    if (me == null) return RedirectToAction("Login", "Account");
-
-        //    var booking = db.Bookings
-        //                    .Include(b => b.Session.Package)
-        //                    .FirstOrDefault(b => b.BookingId == bookingId);
-
-        //    if (booking == null) return HttpNotFound();
-        //    if (booking.Session.Package.AgencyId != me.UserId)
-        //        return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
-
-        //    booking.IsApproved = false;
-        //    booking.Status = "Cancelled";
-
-        //    db.SaveChanges();
-        //    TempData["Error"] = "Booking rejected.";
-        //    return RedirectToAction("Dashboard");
-        //}
-
-
-        //[HttpPost]
-        //[ValidateAntiForgeryToken]
-        //[Authorize(Roles = "Agency")] // or "Agency,Guide" if you allow guides too
-        //public ActionResult TogglePayment(int bookingId)
-        //{
-        //    var me = GetMe();
-        //    if (me == null) return new HttpStatusCodeResult(HttpStatusCode.Unauthorized);
-
-        //    var booking = db.Bookings
-        //        .Include(b => b.Session.Package)
-        //        .FirstOrDefault(b => b.BookingId == bookingId);
-
-        //    if (booking == null) return Json(new { ok = false, error = "Booking not found." });
-
-        //    // Ownership guard: only the package owner agency can toggle
-        //    if (booking.Session.Package.AgencyId != me.UserId)
-        //        return new HttpStatusCodeResult(HttpStatusCode.Forbidden);
-
-        //    // Business guard: only toggle after approval
-        //    if (booking.IsApproved != true)
-        //        return Json(new { ok = false, error = "Approve the booking before changing payment status." });
-
-        //    // Toggle Pending <-> Paid
-        //    var current = (booking.PaymentStatus ?? "Pending").Trim();
-        //    if (string.Equals(current, "Paid", StringComparison.OrdinalIgnoreCase))
-        //    {
-        //        booking.PaymentStatus = "Pending";
-        //        booking.PaidAt = null;
-        //    }
-        //    else
-        //    {
-        //        booking.PaymentStatus = "Paid";
-        //        booking.PaidAt = DateTime.UtcNow;
-        //    }
-
-        //    db.SaveChanges();
-
-        //    // Return fresh KPIs for dashboard (Approved + Paid only)
-        //    var myAgencyKey = me.UserId;
-
-        //    var paidRevenue = db.Bookings
-        //        .Where(b => b.Session.Package.AgencyId == myAgencyKey &&
-        //                    b.IsApproved == true &&
-        //                    b.PaymentStatus == "Paid")
-        //        .Select(b => (decimal?)(b.Session.Package.Price * b.Participants))
-        //        .DefaultIfEmpty(0m)
-        //        .Sum() ?? 0m;
-
-        //    var pendingPayments = db.Bookings.Count(b =>
-        //        b.Session.Package.AgencyId == myAgencyKey &&
-        //        b.IsApproved == true &&
-        //        b.PaymentStatus != "Paid");
-
-        //    return Json(new
-        //    {
-        //        ok = true,
-        //        status = booking.PaymentStatus,
-        //        kpis = new
-        //        {
-        //            paidRevenueText = paidRevenue.ToString("C", System.Globalization.CultureInfo.CurrentCulture),
-        //            pendingPayments = pendingPayments
-        //        }
-        //    });
-        //}
 
     }
 }

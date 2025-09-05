@@ -7,11 +7,10 @@ using TourismManagementSystem.Models.ViewModels;
 
 namespace TourismManagementSystem.Controllers
 {
-    [Authorize(Roles = "Agency")]
-    [RoutePrefix("agency/sessions")]
+    [Authorize(Roles = "Agency,Guide")]
+    [RoutePrefix("provider/sessions")]
     public class PackageSessionsController : BaseController
     {
-     
         private User GetMe()
         {
             var email = User?.Identity?.Name;
@@ -20,39 +19,49 @@ namespace TourismManagementSystem.Controllers
             return db.Users
                      .Include(u => u.Role)
                      .Include(u => u.AgencyProfile)
+                     .Include(u => u.GuideProfile)
                      .FirstOrDefault(u => u.Email == email);
         }
 
+        private bool IsAgency(User me) => me.Role.RoleName == "Agency";
+        private bool IsGuide(User me) => me.Role.RoleName == "Guide";
+
+        // ✅ FIX: Do role filtering outside EF query
         private TourPackage FindOwnedPackageOr404(int packageId)
         {
             var me = GetMe();
             if (me == null) return null;
 
-            var myKey = me.UserId; // shared PK (AgencyProfile PK == UserId)
-            return db.TourPackages
-                     .Include(p => p.Agency.User)
-                     .FirstOrDefault(p => p.PackageId == packageId && p.AgencyId == myKey);
+            bool isAgency = IsAgency(me);
+
+            IQueryable<TourPackage> query = db.TourPackages
+                .Include(p => p.Agency.User)
+                .Include(p => p.Guide.User);
+
+            if (isAgency)
+                return query.FirstOrDefault(p => p.PackageId == packageId && p.AgencyId == me.UserId);
+            else
+                return query.FirstOrDefault(p => p.PackageId == packageId && p.GuideId == me.UserId);
         }
 
-        // ========= Canonical routes =========
-
-        // GET /agency/sessions
+        // ========= Index =========
         [HttpGet, Route("")]
         public ActionResult Index(int page = 1, int pageSize = 10)
         {
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            bool isAgency = IsAgency(me);
             ViewBag.ActivePage = "Sessions";
-            ViewBag.ActivePageGroup = "Agency";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
 
-            var me = db.Users.Include(u => u.AgencyProfile)
-                             .FirstOrDefault(u => u.Email == User.Identity.Name);
-            if (me == null || me.AgencyProfile == null)
-                return HttpNotFound();
-
-            var agencyId = me.UserId; // AgencyProfile PK == UserId
+            if (isAgency && me.AgencyProfile == null) return RedirectToAction("Profile", "Provider");
+            if (IsGuide(me) && me.GuideProfile == null) return RedirectToAction("Profile", "Provider");
 
             var query = db.Sessions
                           .Include(s => s.Package)
-                          .Where(s => s.Package.AgencyId == agencyId)
+                          .Where(s => isAgency ? s.Package.AgencyId == me.UserId
+                                               : s.Package.GuideId == me.UserId)
                           .OrderBy(s => s.StartDate);
 
             var totalCount = query.Count();
@@ -68,13 +77,17 @@ namespace TourismManagementSystem.Controllers
             return View(sessions);
         }
 
-
-        // GET /agency/sessions/{packageId}/create
+        // ========= Create =========
         [HttpGet, Route("{packageId:int}/create")]
         public ActionResult Create(int packageId)
         {
-            ViewBag.ActivePage = "Sessions";            // CHANGED
-            ViewBag.ActivePageGroup = "Agency";
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            bool isAgency = IsAgency(me);
+            ViewBag.ActivePage = "Sessions";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
+
             var pkg = FindOwnedPackageOr404(packageId);
             if (pkg == null) return HttpNotFound();
 
@@ -85,11 +98,11 @@ namespace TourismManagementSystem.Controllers
                 EndDate = DateTime.Today.AddDays(10),
                 Capacity = 10
             };
+
             ViewBag.Package = pkg;
             return View(vm);
         }
 
-        // POST /agency/sessions/{packageId}/create
         [HttpPost, ValidateAntiForgeryToken, Route("{packageId:int}/create")]
         public ActionResult Create(SessionFormVm vm)
         {
@@ -101,8 +114,9 @@ namespace TourismManagementSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.ActivePage = "Sessions";        // CHANGED (so tab stays highlighted on errors)
-                ViewBag.ActivePageGroup = "Agency";
+                var me = GetMe();
+                ViewBag.ActivePage = "Sessions";
+                ViewBag.ActivePageGroup = IsAgency(me) ? "Agency" : "Guide";
                 ViewBag.Package = pkg;
                 return View(vm);
             }
@@ -121,15 +135,20 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["Success"] = "Session created.";
-            return RedirectToAction("Index", new { packageId = vm.PackageId });
+            return RedirectToAction("Index");
         }
 
-        // GET /agency/packages/{packageId}/sessions/{id}/edit
+        // ========= Edit =========
         [HttpGet, Route("{id:int}/edit")]
         public ActionResult Edit(int packageId, int id)
         {
-            ViewBag.ActivePage = "Sessions";        // CHANGED (so tab stays highlighted on errors)
-            ViewBag.ActivePageGroup = "Agency";
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            bool isAgency = IsAgency(me);
+            ViewBag.ActivePage = "Sessions";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
+
             var pkg = FindOwnedPackageOr404(packageId);
             if (pkg == null) return HttpNotFound();
 
@@ -151,7 +170,6 @@ namespace TourismManagementSystem.Controllers
             return View(vm);
         }
 
-        // POST /agency/packages/{packageId}/sessions/{id}/edit
         [HttpPost, ValidateAntiForgeryToken, Route("{id:int}/edit")]
         public ActionResult Edit(int packageId, int id, SessionFormVm vm)
         {
@@ -166,8 +184,9 @@ namespace TourismManagementSystem.Controllers
 
             if (!ModelState.IsValid)
             {
-                ViewBag.ActivePage = "Sessions";        // CHANGED (so tab stays highlighted on errors)
-                ViewBag.ActivePageGroup = "Agency";
+                var me = GetMe();
+                ViewBag.ActivePage = "Sessions";
+                ViewBag.ActivePageGroup = IsAgency(me) ? "Agency" : "Guide";
                 ViewBag.Package = pkg;
                 return View(vm);
             }
@@ -181,15 +200,20 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["Success"] = "Session updated.";
-            return RedirectToAction("Index", new { packageId });
+            return RedirectToAction("Index");
         }
 
-        // GET /agency/packages/{packageId}/sessions/{id}/delete
+        // ========= Delete =========
         [HttpGet, Route("{id:int}/delete")]
         public ActionResult Delete(int packageId, int id)
         {
-            ViewBag.ActivePage = "Sessions";        // CHANGED (so tab stays highlighted on errors)
-            ViewBag.ActivePageGroup = "Agency";
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            bool isAgency = IsAgency(me);
+            ViewBag.ActivePage = "Sessions";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
+
             var pkg = FindOwnedPackageOr404(packageId);
             if (pkg == null) return HttpNotFound();
 
@@ -200,7 +224,6 @@ namespace TourismManagementSystem.Controllers
             return View(entity);
         }
 
-        // POST /agency/packages/{packageId}/sessions/{id}/delete
         [HttpPost, ValidateAntiForgeryToken, ActionName("Delete"), Route("{id:int}/delete")]
         public ActionResult DeleteConfirmed(int packageId, int id)
         {
@@ -214,28 +237,7 @@ namespace TourismManagementSystem.Controllers
             db.SaveChanges();
 
             TempData["Success"] = "Session deleted.";
-            return RedirectToAction("Index", new { packageId });
+            return RedirectToAction("Index");
         }
-
-        // ========= Legacy top-menu route (no packageId in URL) =========
-        // /Agency/Sessions  → auto-pick first owned package and redirect
-        //[HttpGet, Route("~/Agency/Sessions", Name = "AgencySessionsLegacy")]
-        //public ActionResult LegacyIndex()
-        //{
-        //    var me = GetMe();
-        //    if (me == null) return RedirectToAction("Login", "Account");
-
-        //    var myKey = me.UserId;
-        //    var firstPkgId = db.TourPackages
-        //                       .Where(p => p.AgencyId == myKey)
-        //                       .OrderByDescending(p => p.CreatedAt)
-        //                       .Select(p => p.PackageId)
-        //                       .FirstOrDefault();
-
-        //    if (firstPkgId == 0)
-        //        return RedirectToAction("Index", "Package"); // no packages yet
-
-        //    return RedirectToAction("Index", new { packageId = firstPkgId });
-        //}
     }
 }

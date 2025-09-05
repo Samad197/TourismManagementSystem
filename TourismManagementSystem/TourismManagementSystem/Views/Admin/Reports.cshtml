@@ -33,20 +33,22 @@
     <div class="row g-3 mb-3">
         <div class="col-md-3">
             <div class="card p-3 shadow-sm h-100">
-                <div class="text-muted">Rows</div>
+                <div class="text-muted">Total Bookings</div>
                 <div class="display-6">@totalRows</div>
             </div>
+
         </div>
         <div class="col-md-3">
             <div class="card p-3 shadow-sm h-100">
                 <div class="text-muted">Total Amount</div>
-                <div class="h4">@totalAmount.ToString("C0")</div>
+                <div class="h4">@totalAmount.ToString("C0", new System.Globalization.CultureInfo("en-AU"))</div>
+
             </div>
         </div>
     </div>
 
     <div class="table-responsive">
-        <table class="table table-striped align-middle">
+        <table id="tblReports" class="table table-striped table-hover align-middle">
             <thead class="table-light">
                 <tr>
                     <th>#</th>
@@ -62,21 +64,56 @@
             <tbody>
                 @if (Model != null)
                 {
+                    var index = 1;
                     foreach (var r in Model)
                     {
                         <tr>
-                            <td>@r.BookingId</td>
+                           <td>@index</td>
                             <td>@r.CustomerName</td>
                             <td>@r.PackageTitle</td>
                             <td>@r.StartDate.ToString("dd MMM yyyy")</td>
                             <td>@r.Participants</td>
-                            <td>@r.Amount.ToString("C0")</td>
-                            <td>@r.PaymentStatus</td>
+                            <td>@r.Amount.ToString("C0", new System.Globalization.CultureInfo("en-AU"))</td>
+                            <td>
+                                <span class="badge @(r.PaymentStatus=="Paid" ? "bg-success" : "bg-secondary")">
+                                    @r.PaymentStatus
+                                </span>
+                            </td>
                             <td>@r.CreatedAt.ToString("yyyy-MM-dd HH:mm")</td>
                         </tr>
+                        index++;
                     }
                 }
             </tbody>
         </table>
     </div>
+
 </div>
+
+@section Scripts {
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
+    <script>
+        $(function () {
+            $('#tblReports').DataTable({
+                pageLength: 10,
+                lengthMenu: [5, 10, 20, 50, 100],
+                ordering: true,
+                responsive: true,
+                columnDefs: [
+                    { orderable: false, targets: [] } // all columns sortable by default
+                ],
+                language: {
+                    search: "Search bookings:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries",
+                    infoEmpty: "No entries available",
+                    zeroRecords: "No matching records found"
+                }
+            });
+        });
+    </script>
+}

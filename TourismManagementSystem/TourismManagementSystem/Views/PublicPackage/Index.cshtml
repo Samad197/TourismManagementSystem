@@ -202,15 +202,15 @@
 
                                 <!-- Optional ratings -->
                                 @*
-            <div class="mb-3 mt-2">
-                @{
-                    var full = (int)Math.Round(pkg.AvgRating ?? 0);
-                    for (int i = 0; i < 5; i++)
-                    {
-                        <small class="fa fa-star @(i < full ? "star" : "star-muted")"></small>
-                    }
-                }
-            </div>
+                                    <div class="mb-3 mt-2">
+                                        @{
+                                            var full = (int)Math.Round(pkg.AvgRating ?? 0);
+                                            for (int i = 0; i < 5; i++)
+                                            {
+                                                <small class="fa fa-star @(i < full ? "star" : "star-muted")"></small>
+                                            }
+                                        }
+                                    </div>
                                 *@
 
                                 <p class="mb-4 mt-2 small text-muted">

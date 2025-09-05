@@ -95,12 +95,18 @@
         @Html.ValidationSummary(true, "", new { @class = "text-danger mb-3" })
 
 <div class="row">
-    <div class="col-md-6 mb-3">
-        @* Owner / Contact person (from User.FullName) *@
+    @*<div class="col-md-6 mb-3">
         <label class="form-label fw-semibold">Owner / Contact Person</label>
         <input class="form-control" value="@(Model?.User?.FullName ?? "")" readonly />
-        <small class="text-muted">Change this in Account Settings if needed.</small>
+    </div>*@
+
+    <div class="col-md-6 mb-3">
+        @Html.Label("OwnerName", "Owner / Contact Person", new { @class = "form-label fw-semibold" })
+        @Html.TextBox("OwnerName", Model?.User?.FullName, new { @class = "form-control", placeholder = "Enter owner or contact person name" })
+        <small class="text-muted">This will also update your account name.</small>
     </div>
+
+
     <div class="col-md-6 mb-3">
         @Html.LabelFor(m => m.AgencyName, new { @class = "form-label fw-semibold" })
         @Html.TextBoxFor(

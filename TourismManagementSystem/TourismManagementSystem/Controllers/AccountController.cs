@@ -231,13 +231,13 @@ namespace TourismManagementSystem.Controllers
 
             if (roleName.Equals("Agency", StringComparison.OrdinalIgnoreCase))
                 return user.IsApproved
-                    ? SafeRedirect(returnUrl, "Dashboard", "Agency")
-                    : RedirectToAction("Dashboard", "Agency");
+                    ? SafeRedirect(returnUrl, "Dashboard", "Provider")
+                    : RedirectToAction("Dashboard", "Provider");
 
             if (roleName.Equals("Guide", StringComparison.OrdinalIgnoreCase))
                 return user.IsApproved
-                    ? SafeRedirect(returnUrl, "Dashboard", "Guide")
-                    : RedirectToAction("Dashboard", "Guide");
+                    ? SafeRedirect(returnUrl, "Dashboard", "Provider")
+                    : RedirectToAction("Dashboard", "Provider");
 
             if (roleName.Equals("Admin", StringComparison.OrdinalIgnoreCase))
                 return RedirectToAction("Dashboard", "Admin");

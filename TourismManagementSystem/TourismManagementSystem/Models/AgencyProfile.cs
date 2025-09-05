@@ -30,4 +30,13 @@ namespace TourismManagementSystem.Models
         public string VerificationDocPath { get; set; }
     }
 
+    public interface IProviderProfile
+    {
+        int UserId { get; set; }
+        string Phone { get; set; }
+        string VerificationDocPath { get; set; }
+        string Status { get; set; }
+    }
+
+
 }

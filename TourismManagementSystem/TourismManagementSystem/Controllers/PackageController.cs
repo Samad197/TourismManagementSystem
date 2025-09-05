@@ -3,17 +3,15 @@ using System.Collections.Generic;
 using System.Data.Entity;
 using System.IO;
 using System.Linq;
-using System.Threading.Tasks;
 using System.Web;
 using System.Web.Mvc;
-using TourismManagementSystem.Data;
 using TourismManagementSystem.Models;
 using TourismManagementSystem.Models.ViewModels;
 
 namespace TourismManagementSystem.Controllers
 {
-    [Authorize(Roles = "Agency")]
-    [RoutePrefix("agency/packages")]
+    [Authorize(Roles = "Agency,Guide")]
+    [RoutePrefix("provider/packages")]
     public class PackageController : BaseController
     {
         // GET ME
@@ -25,24 +23,42 @@ namespace TourismManagementSystem.Controllers
             return db.Users
                      .Include(u => u.Role)
                      .Include(u => u.AgencyProfile)
+                     .Include(u => u.GuideProfile)
                      .FirstOrDefault(u => u.Email == email);
         }
 
-        // GET /agency/packages
+        // 🔹 Helper to detect role
+        private bool IsAgency(User me) => me.Role.RoleName == "Agency";
+        private bool IsGuide(User me) => me.Role.RoleName == "Guide";
+
+        // GET /provider/packages
         [HttpGet, Route("")]
         public ActionResult Index()
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
 
+            bool isAgency = IsAgency(me);
             ViewBag.ActivePage = "Packages";
-            ViewBag.ActivePageGroup = "Agency";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
 
-            if (me.AgencyProfile == null) return RedirectToAction("Profile", "Agency");
-            if (!me.IsApproved) return View("~/Views/Agency/NotApproved.cshtml", me.AgencyProfile);
+            if (isAgency && me.AgencyProfile == null)
+                return RedirectToAction("Profile", "Provider");
+
+            if (!isAgency && me.GuideProfile == null) // Guide case
+                return RedirectToAction("Profile", "Provider");
+
+            //if (!me.IsApproved)
+            //{
+            //    ViewBag.IsAgency = isAgency;
+            //    ViewBag.RoleName = isAgency ? "Agency" : "Guide";
+
+            //    return View("~/Views/Provider/NotApproved.cshtml",
+            //                isAgency ? (object)me.AgencyProfile : me.GuideProfile);
+            //}
 
             var items = db.TourPackages
-                          .Where(p => p.AgencyId == me.UserId)
+                          .Where(p => isAgency ? p.AgencyId == me.UserId : p.GuideId == me.UserId)
                           .Select(p => new MyPackageListItemVm
                           {
                               PackageId = p.PackageId,
@@ -59,27 +75,35 @@ namespace TourismManagementSystem.Controllers
             return View(items);
         }
 
-        // GET /agency/packages/create
+
+        // GET /provider/packages/create
         [HttpGet, Route("create")]
         public ActionResult Create()
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
-            if (me.AgencyProfile == null) return RedirectToAction("Profile", "Agency");
+
+            bool isAgency = IsAgency(me);
+            if (isAgency && me.AgencyProfile == null)
+                return RedirectToAction("Profile", "Provider");
+            if (IsGuide(me) && me.GuideProfile == null)
+                return RedirectToAction("Profile", "Provider");
 
             ViewBag.ActivePage = "CreatePackage";
-            ViewBag.ActivePageGroup = "Agency";
+            ViewBag.ActivePageGroup = isAgency ? "Agency" : "Guide";
 
             return View(new PackageCreateVm { DurationDays = 1, MaxGroupSize = 10 });
         }
 
-        // POST /agency/packages/create
+        // POST /provider/packages/create
         [HttpPost, ValidateAntiForgeryToken, Route("create")]
         public ActionResult Create(PackageCreateVm vm)
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
             if (!ModelState.IsValid) return View(vm);
+
+            bool isAgency = IsAgency(me);
 
             var pkg = new TourPackage
             {
@@ -90,30 +114,37 @@ namespace TourismManagementSystem.Controllers
                 MaxGroupSize = vm.MaxGroupSize,
                 StartDate = vm.StartDate,
                 EndDate = vm.EndDate,
-                AgencyId = me.UserId,
                 CreatedAt = DateTime.UtcNow
             };
+
+            // 🔹 assign owner depending on role
+            if (isAgency)
+                pkg.AgencyId = me.UserId;
+            else
+                pkg.GuideId = me.UserId;
 
             db.TourPackages.Add(pkg);
             db.SaveChanges();
 
-            // Save uploaded images
             SaveImages(vm.Images, pkg.PackageId);
 
             TempData["Success"] = "Package created. You can now add sessions (dates) and images.";
             return RedirectToAction("Index");
         }
 
-        // GET /agency/packages/{id}/edit
+        // GET /provider/packages/{id}/edit
         [HttpGet, Route("{id:int}/edit")]
         public ActionResult Edit(int id)
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
 
+            bool isAgency = IsAgency(me);
+
             var pkg = db.TourPackages
                         .Include(p => p.Images)
-                        .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
+                        .FirstOrDefault(p => p.PackageId == id &&
+                                             (isAgency ? p.AgencyId == me.UserId : p.GuideId == me.UserId)); // 🔹 role filter
 
             if (pkg == null) return HttpNotFound();
 
@@ -133,7 +164,7 @@ namespace TourismManagementSystem.Controllers
             return View(vm);
         }
 
-        // POST /agency/packages/{id}/edit
+        // POST /provider/packages/{id}/edit
         [HttpPost, ValidateAntiForgeryToken, Route("{id:int}/edit")]
         public ActionResult Edit(int id, PackageCreateVm vm, int[] removeImageIds)
         {
@@ -141,9 +172,12 @@ namespace TourismManagementSystem.Controllers
             if (me == null) return RedirectToAction("Login", "Account");
             if (!ModelState.IsValid) return View(vm);
 
+            bool isAgency = IsAgency(me);
+
             var pkg = db.TourPackages
                         .Include(p => p.Images)
-                        .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
+                        .FirstOrDefault(p => p.PackageId == id &&
+                                             (isAgency ? p.AgencyId == me.UserId : p.GuideId == me.UserId)); // 🔹 role filter
 
             if (pkg == null) return HttpNotFound();
 
@@ -155,7 +189,7 @@ namespace TourismManagementSystem.Controllers
             pkg.StartDate = vm.StartDate;
             pkg.EndDate = vm.EndDate;
 
-            // Remove selected images
+            // Remove images
             if (removeImageIds != null && removeImageIds.Length > 0)
             {
                 var imagesToRemove = pkg.Images.Where(i => removeImageIds.Contains(i.ImageId)).ToList();
@@ -167,7 +201,6 @@ namespace TourismManagementSystem.Controllers
                 }
             }
 
-            // Upload new images
             SaveImages(vm.Images, pkg.PackageId);
 
             db.SaveChanges();
@@ -175,27 +208,30 @@ namespace TourismManagementSystem.Controllers
             return RedirectToAction("Index");
         }
 
-        // DELETE
+        // POST /provider/packages/{id}/delete
         [HttpPost, ValidateAntiForgeryToken, Route("{id:int}/delete")]
         public ActionResult Delete(int id)
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
 
+            bool isAgency = IsAgency(me);
+
             var pkg = db.TourPackages
                         .Include(p => p.Sessions.Select(s => s.Bookings))
                         .Include(p => p.Images)
-                        .FirstOrDefault(p => p.PackageId == id && p.AgencyId == me.UserId);
+                        .FirstOrDefault(p => p.PackageId == id &&
+                                             (isAgency ? p.AgencyId == me.UserId : p.GuideId == me.UserId)); // 🔹 role filter
+
             if (pkg == null) return HttpNotFound();
 
-            // Block if bookings exist
             if (pkg.Sessions.Any(s => s.Bookings.Any()))
             {
                 TempData["Error"] = "Cannot delete a package that has bookings.";
                 return RedirectToAction("Index");
             }
 
-            // Delete images from server
+            // Delete images
             foreach (var img in pkg.Images.ToList())
             {
                 var fullPath = Server.MapPath(img.ImagePath);
@@ -235,6 +271,5 @@ namespace TourismManagementSystem.Controllers
                 }
             }
         }
-
     }
 }

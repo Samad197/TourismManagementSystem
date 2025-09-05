@@ -1,6 +1,6 @@
 ﻿@model TourismManagementSystem.Models.ViewModels.AgencyDashboardVm
 @{
-    ViewBag.Title = "Agency Dashboard";
+    ViewBag.Title = $"{ViewBag.RoleName} Dashboard";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
@@ -14,7 +14,8 @@
 
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width:900px;">
-        <h3 class="text-white display-3 mb-2">Agency Dashboard</h3>
+        <h3 class="text-white display-3 mb-2">@ViewBag.RoleName Dashboard</h3>
+
 
         <p class="text-white-50 mb-0">Welcome, @Model.AgencyName</p>
     </div>
@@ -33,47 +34,51 @@
     {<div class="alert alert-danger">@TempData["Error"]</div>}
 
     <!-- KPI Cards -->
-<div class="row g-3 mb-3">
-    <div class="col-md-2">
-        <div class="card shadow-sm text-center p-3">
-            <div class="fw-bold">Packages</div>
-            <div class="display-6">@Model.TotalPackages</div>
+    <div class="row g-3 mb-3">
+        <div class="col-md-2">
+            <div class="card shadow-sm text-center p-3">
+                <div class="fw-bold">Packages</div>
+                <div class="display-6">@Model.TotalPackages</div>
+            </div>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card shadow-sm text-center p-3">
-            <div class="fw-bold">Upcoming</div>
-            <div class="display-6">@Model.UpcomingSessions</div>
+        <div class="col-md-2">
+            <div class="card shadow-sm text-center p-3">
+                <div class="fw-bold">Upcoming</div>
+                <div class="display-6">@Model.UpcomingSessions</div>
+            </div>
         </div>
-    </div>
-    <div class="col-md-2">
-        <div class="card shadow-sm text-center p-3">
-            <div class="fw-bold">Bookings</div>
-            <div class="display-6">@Model.TotalBookings</div>
+        <div class="col-md-2">
+            <div class="card shadow-sm text-center p-3">
+                <div class="fw-bold">Bookings</div>
+                <div class="display-6">@Model.TotalBookings</div>
+            </div>
         </div>
-    </div>
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center p-3">
-            <div class="fw-bold">Paid Revenue</div>
-            <div class="h4" id="kpiPaidRevenue">
-                @Model.PaidRevenue.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center p-3">
+                <div class="fw-bold">Paid Revenue</div>
+                <div class="h4" id="kpiPaidRevenue">
+                    @Model.PaidRevenue.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm text-center p-3">
+                <div class="fw-bold">Pending Payments</div>
+                <div class="display-6" id="kpiPendingPayments">@Model.PendingPayments</div>
             </div>
         </div>
     </div>
-
-    <div class="col-md-3">
-        <div class="card shadow-sm text-center p-3">
-            <div class="fw-bold">Pending Payments</div>
-            <div class="display-6" id="kpiPendingPayments">@Model.PendingPayments</div>
-        </div>
-    </div>
-</div>
 
     <!-- Quick Actions -->
     <div class="mb-4 d-flex flex-wrap gap-2">
         <a href="@Url.Action("Create","Package")" class="btn btn-primary"><i class="fas fa-plus me-1"></i> Create Package</a>
         <a href="@Url.Action("Index","Package")" class="btn btn-outline-secondary"><i class="fas fa-archive me-1"></i> My Packages</a>
-        <a href="@Url.Action("Sessions","Agency")" class="btn btn-outline-secondary"><i class="far fa-calendar-alt me-1"></i> Sessions</a>
+        <a href="@Url.Action("Index","PackageSessions")" class="btn btn-outline-secondary"><i class="far fa-calendar-alt me-1"></i> Sessions</a>
+        @*<a href="@Url.Action("Index","PackageSessions")"
+           class="nav-item nav-link @active("Sessions")">
+            Sessions
+        </a>*@
     </div>
 
     <div class="row g-4">
@@ -176,8 +181,8 @@
 
 
                                             @*<td class="text-end">
-                                                @b.Amount.ToString("C", new System.Globalization.CultureInfo("en-AU"))
-                                            </td>*@
+                                                    @b.Amount.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+                                                </td>*@
 
 
                                             <!-- Approval status -->
@@ -285,7 +290,7 @@
 <div class="modal fade" id="bookingDecisionModal" tabindex="-1" aria-labelledby="bookingDecisionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            @using (Html.BeginForm("ApproveBooking", "Agency", FormMethod.Post, new { id = "bookingDecisionForm" }))
+            @using (Html.BeginForm("ApproveBooking", "Provider", FormMethod.Post, new { id = "bookingDecisionForm" }))
             {
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
@@ -432,15 +437,15 @@
 
     if(approveBtn){
       e.preventDefault();
-      toggleBooking(approveBtn,'@Url.Action("ApproveBooking","Agency")',"approval");
+      toggleBooking(approveBtn,'@Url.Action("ApproveBooking", "Provider")',"approval");
     }
     if(rejectBtn){
       e.preventDefault();
-      toggleBooking(rejectBtn,'@Url.Action("RejectBooking","Agency")',"approval");
+      toggleBooking(rejectBtn,'@Url.Action("RejectBooking", "Provider")',"approval");
     }
     if(payBtn){
       e.preventDefault();
-      toggleBooking(payBtn,'@Url.Action("TogglePayment","Agency")',"payment");
+      toggleBooking(payBtn,'@Url.Action("TogglePayment", "Provider")',"payment");
     }
   });
 

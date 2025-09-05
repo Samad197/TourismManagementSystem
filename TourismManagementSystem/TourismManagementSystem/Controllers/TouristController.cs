@@ -648,7 +648,8 @@ namespace TourismManagementSystem.Controllers
                 .Include(b => b.Session.Package)
                 .Include(b => b.Feedbacks)
                 .Where(b => b.TouristId == myId)
-                .OrderBy(b => b.Session.StartDate)
+                //.OrderBy(b => b.Session.StartDate)
+                .OrderByDescending(b => b.Session.StartDate)
                 .ToList()
                 .Select(b => new TouristBookingRowVm
                 {
@@ -665,7 +666,7 @@ namespace TourismManagementSystem.Controllers
                     ExistingFeedbackId = b.Feedbacks?.Select(f => (int?)f.FeedbackId).FirstOrDefault(),
                     Amount = (b.Session.Package.Price * b.Participants)
                 })
-                .Where(vm => !vm.IsCompleted)
+                //.Where(vm => !vm.IsCompleted)
                 .ToList();
 
             ViewBag.ActivePage = "MyBookings";

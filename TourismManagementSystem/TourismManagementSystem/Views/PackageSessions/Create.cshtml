@@ -26,7 +26,8 @@
         @Html.HiddenFor(m => m.PackageId)
 
         <!-- Validation summary -->
-        @Html.ValidationSummary(false, "", new { @class = "alert alert-danger" })
+        @Html.ValidationSummary(true, "", new { @class = "alert alert-danger" })
+
 
         <div class="row mb-3">
             <div class="col-md-6">
@@ -58,12 +59,12 @@
                 @Html.ValidationMessageFor(m => m.Capacity, "", new { @class = "text-danger small" })
             </div>
 
-            <div class="col-md-6 d-flex align-items-center mt-4">
+            @*<div class="col-md-6 d-flex align-items-center mt-4">
                 <div class="form-check">
                     @Html.CheckBoxFor(m => m.IsCanceled, new { @class = "form-check-input", id = "chkCanceled" })
                     <label class="form-check-label" for="chkCanceled">Mark session as canceled</label>
                 </div>
-            </div>
+            </div>*@
         </div>
 
         <div class="mb-3">

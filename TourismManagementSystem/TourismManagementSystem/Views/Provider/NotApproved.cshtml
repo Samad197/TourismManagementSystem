@@ -1,0 +1,162 @@
+﻿@model dynamic
+@using System
+
+@{
+    ViewBag.Title = "Awaiting Approval";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    bool isAgency = ViewBag.IsAgency == true;
+
+    // Profile completeness calculation
+    bool hasName = isAgency
+        ? !string.IsNullOrWhiteSpace(Model?.AgencyName)
+        : !string.IsNullOrWhiteSpace(Model?.FullNameOnLicense);
+
+    bool hasDesc = isAgency
+        ? !string.IsNullOrWhiteSpace(Model?.Description)
+        : !string.IsNullOrWhiteSpace(Model?.Bio);
+
+    bool hasPhone = !string.IsNullOrWhiteSpace(Model?.Phone);
+    bool hasDoc = !string.IsNullOrWhiteSpace(Model?.VerificationDocPath);
+    bool hasSite = isAgency && !string.IsNullOrWhiteSpace(Model?.Website);
+
+    int total = isAgency ? 5 : 4;
+    int filled = (hasName ? 1 : 0) + (hasDesc ? 1 : 0) + (hasPhone ? 1 : 0) +
+                 (hasDoc ? 1 : 0) + (isAgency && hasSite ? 1 : 0);
+    int pct = (int)Math.Round(total == 0 ? 0 : (filled * 100.0 / total));
+}
+
+<!-- Header -->
+<div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width:900px;">
+        <h3 class="text-white display-3 mb-2">@ViewBag.RoleName Dashboard</h3>
+        <p class="text-white-50 mb-0">
+            Welcome, @(hasName
+                ? (isAgency ? Model.AgencyName : Model.FullNameOnLicense)
+                : $"New {ViewBag.RoleName}")
+        </p>
+    </div>
+</div>
+
+<div class="container py-5" style="max-width:900px;">
+
+    <!-- Pending status -->
+    <div class="alert alert-warning d-flex align-items-center justify-content-between">
+        <div>
+            <h4 class="mb-1">
+                Status: <span class="badge bg-warning text-dark">Pending Approval</span>
+            </h4>
+            <p class="mb-0">
+                An administrator must approve your account before tours can be published and bookings accepted.
+                Please make sure your <strong>@ViewBag.RoleName Profile</strong> is complete and documents are uploaded.
+            </p>
+        </div>
+        <div class="ms-3 d-none d-md-block">
+            <i class="fas fa-hourglass-half fa-2x text-warning"></i>
+        </div>
+    </div>
+
+    <!-- Profile completeness -->
+    <div class="card shadow-sm rounded-3 mb-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h5 class="card-title mb-0">Profile completeness</h5>
+                <span class="small text-muted">@pct%</span>
+            </div>
+            <div class="progress mb-3" style="height:10px;">
+                <div class="progress-bar" role="progressbar"
+                     style="width:@pct%;" aria-valuenow="@pct"
+                     aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    <i class="@(hasName ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    @(isAgency ? "Agency Name" : "Full Name on License")
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasDesc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    @(isAgency ? "Description" : "Bio")
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasPhone ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Phone
+                </li>
+                <li class="mb-2">
+                    <i class="@(hasDoc ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                    Verification Document
+                </li>
+                @if (isAgency)
+                {
+                    <li class="mb-2">
+                        <i class="@(hasSite ? "fas fa-check-circle text-success" : "far fa-circle text-muted") me-2"></i>
+                        Website <span class="text-muted small">(optional)</span>
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+
+    <!-- Inline Profile Update -->
+    <div class="card shadow-sm rounded-3 mb-4">
+        <div class="card-body">
+            <h5 class="mb-3">Update Your @ViewBag.RoleName Profile</h5>
+
+            @using (Html.BeginForm("UpdateProfileFromNotApproved", "Provider", FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                if (isAgency)
+                {
+                    <div class="mb-3">
+                        @Html.Label("AgencyName", "Agency Name", new { @class = "form-label fw-semibold" })
+                        @Html.TextBox("AgencyName", (string)(Model?.AgencyName ?? ""), new { @class = "form-control" })
+                    </div>
+
+                    <div class="mb-3">
+                        @Html.Label("Description", "Description", new { @class = "form-label fw-semibold" })
+                        @Html.TextArea("Description", (string)(Model?.Description ?? ""), 4, 60, new { @class = "form-control" })
+                    </div>
+
+                    <div class="mb-3">
+                        @Html.Label("Website", "Website", new { @class = "form-label fw-semibold" })
+                        @Html.TextBox("Website", (string)(Model?.Website ?? ""), new { @class = "form-control", placeholder = "https://example.com" })
+                    </div>
+                }
+                else
+                {
+                    <div class="mb-3">
+                        @Html.Label("FullNameOnLicense", "Full Name on License", new { @class = "form-label fw-semibold" })
+                        @Html.TextBox("FullNameOnLicense", (string)(Model?.FullNameOnLicense ?? ""), new { @class = "form-control" })
+                    </div>
+
+                    <div class="mb-3">
+                        @Html.Label("Bio", "Bio", new { @class = "form-label fw-semibold" })
+                        @Html.TextArea("Bio", (string)(Model?.Bio ?? ""), 4, 60, new { @class = "form-control" })
+                    </div>
+                }
+
+                <div class="mb-3">
+                    @Html.Label("Phone", "Phone", new { @class = "form-label fw-semibold" })
+                    @Html.TextBox("Phone", (string)(Model?.Phone ?? ""), new { @class = "form-control", placeholder = "+92 3XX XXX XXXX" })
+                </div>
+
+                <div class="mb-3">
+                    @Html.Label("VerificationDocPath", "Verification Document", new { @class = "form-label fw-semibold" })
+                    @Html.TextBox("VerificationDocPath", (string)(Model?.VerificationDocPath ?? ""), new { @class = "form-control", placeholder = "Link to your license/registration" })
+                </div>
+
+                <button type="submit" class="btn btn-success">
+                    <i class="fas fa-save me-1"></i> Save Profile
+                </button>
+            }
+        </div>
+    </div>
+
+    <!-- Other actions -->
+    <div class="d-flex flex-wrap gap-2">
+        <a href="@Url.Action("Index","PublicPackage", new { preview = 1 })" class="btn btn-light">
+            <i class="fas fa-search me-1"></i> Preview Public Packages
+        </a>
+    </div>
+</div>

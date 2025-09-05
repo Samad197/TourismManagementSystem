@@ -138,6 +138,7 @@
     <Compile Include="Controllers\HomeController.cs" />
     <Compile Include="Controllers\PackageController.cs" />
     <Compile Include="Controllers\PackageSessionsController.cs" />
+    <Compile Include="Controllers\ProviderController.cs" />
     <Compile Include="Controllers\PublicPackageController.cs" />
     <Compile Include="Controllers\ServiceController.cs" />
     <Compile Include="Controllers\TourController.cs" />
@@ -485,6 +486,12 @@
     <Content Include="Views\Tourist\Index.cshtml" />
     <Content Include="Views\Agency\Bookings.cshtml" />
     <Content Include="Views\Agency\Feedback.cshtml" />
+    <Content Include="Views\Provider\Book.cshtml" />
+    <Content Include="Views\Provider\Bookings.cshtml" />
+    <Content Include="Views\Provider\Dashboard.cshtml" />
+    <Content Include="Views\Provider\Feedback.cshtml" />
+    <Content Include="Views\Provider\NotApproved.cshtml" />
+    <Content Include="Views\Provider\Profile.cshtml" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="App_Data\" />

@@ -1,26 +1,26 @@
 ﻿@model List<TourismManagementSystem.Models.ViewModels.BookingViewModel>
 
 @{
-    ViewBag.Title = "Agency Bookings";
+    ViewBag.Title = $"{ViewBag.RoleName} Bookings";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
 
 @*<div class="container-fluid bg-breadcrumb">
-    <div class="container text-center py-5" style="max-width:900px;">
-        <h3 class="text-white display-3 mb-2">Agency Bookings</h3>
-        <p class="text-white-50 mb-0">Manage your customer bookings</p>
-    </div>
-</div>*@
+        <div class="container text-center py-5" style="max-width:900px;">
+            <h3 class="text-white display-3 mb-2">Agency Bookings</h3>
+            <p class="text-white-50 mb-0">Manage your customer bookings</p>
+        </div>
+    </div>*@
+
 
 
 <!-- Header Start -->
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width: 900px;">
-        <h3 class="text-white display-3 mb-4">Agency Bookings</h3>
+        <h3 class="text-white display-3 mb-4">@ViewBag.RoleName Bookings</h3>
         <ol class="breadcrumb justify-content-center mb-0">
             <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
-            @*<li class="breadcrumb-item"><a href="@Url.Action("Index", "Package")">My Packages</a></li>*@
-        <li class="breadcrumb-item active text-white">Agency Bookings</li>
+            <li class="breadcrumb-item active text-white">@ViewBag.RoleName Bookings</li>
         </ol>
     </div>
 </div>
@@ -242,15 +242,15 @@
 
                 if (approveBtn) {
                     e.preventDefault();
-                    toggleBooking(approveBtn, '@Url.Action("ApproveBooking","Agency")', "approval");
+                    toggleBooking(approveBtn, '@Url.Action("ApproveBooking", "Provider")', "approval");
                 }
                 if (rejectBtn) {
                     e.preventDefault();
-                    toggleBooking(rejectBtn, '@Url.Action("RejectBooking","Agency")', "approval");
+                    toggleBooking(rejectBtn, '@Url.Action("RejectBooking", "Provider")', "approval");
                 }
                 if (payBtn) {
                     e.preventDefault();
-                    toggleBooking(payBtn, '@Url.Action("TogglePayment","Agency")', "payment");
+                    toggleBooking(payBtn, '@Url.Action("TogglePayment", "Provider")', "payment");
                 }
             });
         })();

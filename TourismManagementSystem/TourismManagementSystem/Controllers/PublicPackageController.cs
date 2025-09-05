@@ -18,10 +18,12 @@ namespace TourismManagementSystem.Controllers
         private readonly TourismDbContext db = new TourismDbContext();
 
         // GET: /packages
+        // GET: /packages
         [HttpGet, Route("")]
         [AllowAnonymous]
         public ActionResult Index(string q, decimal? minPrice, decimal? maxPrice, int? minDays, int? maxDays, bool upcomingOnly = true)
         {
+
             ViewBag.ActivePage = "Packages";
             ViewBag.ActivePageGroup = "Packages";
             ViewBag.Q = q;
@@ -35,6 +37,7 @@ namespace TourismManagementSystem.Controllers
                 .Include(p => p.Agency.User)
                 .Include(p => p.Guide.User);
 
+            // only approved + active providers
             query = query.Where(p =>
                 (p.AgencyId != null && p.Agency.User.IsApproved && p.Agency.User.IsActive) ||
                 (p.GuideId != null && p.Guide.User.IsApproved && p.Guide.User.IsActive));
@@ -59,12 +62,22 @@ namespace TourismManagementSystem.Controllers
                     Price = p.Price,
                     DurationDays = p.DurationDays,
                     MaxGroupSize = p.MaxGroupSize,
-                    ThumbnailPath = p.Images.Any() ? p.Images.FirstOrDefault().ImagePath : "/images/placeholder.jpg",
+                    ThumbnailPath = p.Images.Any()
+                        ? p.Images.FirstOrDefault().ImagePath
+                        : "/images/placeholder.jpg",
                     OwnerType = p.AgencyId != null ? "Agency" : "Guide",
                     OwnerName = p.AgencyId != null ? p.Agency.User.FullName : p.Guide.User.FullName,
-                    HasUpcoming = p.Sessions.Any(s => DbFunctions.TruncateTime(s.StartDate) >= today),
 
-                    // nullable average rating from feedback
+                    // mark if any future session exists
+                    HasUpcoming = p.Sessions.Any(s =>
+                        DbFunctions.TruncateTime(s.StartDate) >= today),
+
+                    // mark if any future session still has seats
+                    HasAvailableSession = p.Sessions.Any(s =>
+                        DbFunctions.TruncateTime(s.StartDate) >= today &&
+                        (s.Capacity > s.Bookings.Count)),
+
+                    // average rating
                     AvgRating = p.Sessions
                                  .SelectMany(s => s.Bookings)
                                  .SelectMany(b => b.Feedbacks)
@@ -75,6 +88,7 @@ namespace TourismManagementSystem.Controllers
 
             return View(packages);
         }
+
 
 
         [HttpGet, Route("details/{id:int}")]

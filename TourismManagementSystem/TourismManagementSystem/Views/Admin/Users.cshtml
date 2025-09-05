@@ -3,6 +3,12 @@
     ViewBag.Title = "Manage Users";
     Layout = "~/Views/Shared/_Layout.cshtml";
 }
+
+<link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+
 <div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width:900px;">
         <h3 class="text-white display-3 mb-4">Users</h3>
@@ -29,29 +35,19 @@
             <label class="form-label">Active</label>
             <select id="filterActive" class="form-select">
                 <option value="">All</option>
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
+                <option value="Active">Active</option>
+                <option value="Inactive">Inactive</option>
             </select>
         </div>
         <div class="col-md-3">
             <label class="form-label">Approved</label>
             <select id="filterApproved" class="form-select">
                 <option value="">All</option>
-                <option value="true">Approved</option>
-                <option value="false">Not Approved</option>
+                <option value="Approved">Approved</option>
+                <option value="Pending">Not Approved</option>
             </select>
         </div>
-        @*<div class="col-md-3">
-            <label class="form-label">Search</label>
-            <div class="input-group">
-                <input id="searchUsers" type="text" class="form-control" placeholder="Search name or email">
-                <button id="btnApplyFilters" type="button" class="btn btn-outline-secondary">Search</button>
-                <button id="btnClearFilters" type="button" class="btn btn-outline-danger">Clear</button>
-            </div>
-            <small class="text-muted">Filters apply live; the Search button is optional.</small>
-        </div>*@
     </div>
-
 
     <div class="table-responsive">
         <table id="usersTable" class="table table-striped align-middle">
@@ -73,8 +69,12 @@
                     var isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
                     var isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
 
-                    <tr data-role="@u.RoleName" data-active="@u.IsActive.ToString().ToLower()" data-approved="@u.IsApproved.ToString().ToLower()">
-                        <td><span class="badge @(u.RoleName=="Admin"?"bg-dark":u.RoleName=="Agency"?"bg-primary":u.RoleName=="Guide"?"bg-info":"bg-secondary")">@u.RoleName</span></td>
+                    <tr>
+                        <td>
+                            <span class="badge @(u.RoleName=="Admin"?"bg-dark":u.RoleName=="Agency"?"bg-primary":u.RoleName=="Guide"?"bg-info":"bg-secondary")">
+                                @u.RoleName
+                            </span>
+                        </td>
                         <td>@u.FullName</td>
                         <td>@u.Email</td>
                         <td>@(u.IsActive ? Html.Raw("<span class='badge bg-success'>Active</span>") : Html.Raw("<span class='badge bg-secondary'>Inactive</span>"))</td>
@@ -83,13 +83,7 @@
                         <td class="d-flex flex-wrap gap-2">
                             <a class="btn btn-sm btn-outline-secondary" href="@Url.Action("UserDetails","Admin", new { id = u.UserId })">View</a>
 
-                            @{
-                                isSelf = string.Equals(u.Email, User.Identity.Name, StringComparison.OrdinalIgnoreCase);
-                                isAdminRow = string.Equals(u.RoleName, "Admin", StringComparison.OrdinalIgnoreCase);
-                                isProvider = u.RoleName == "Agency" || u.RoleName == "Guide";
-                            }
-
-                            @* Toggle Active for everyone except Admin rows and self *@
+                            @* Toggle Active (not self, not Admin) *@
                             @if (!isSelf && !isAdminRow)
                             {
                                 using (Html.BeginForm("ToggleActive", "Admin", FormMethod.Post, new { id = $"formActive_{u.UserId}" }))
@@ -107,7 +101,7 @@
                                 }
                             }
 
-                            @* Toggle Approved for Agency/Guide only (not self) *@
+                            @* Toggle Approved (only Agency/Guide, not self) *@
                             @if (isProvider && !isSelf)
                             {
                                 using (Html.BeginForm("ToggleApproved", "Admin", FormMethod.Post, new { id = $"formApprove_{u.UserId}" }))
@@ -125,7 +119,6 @@
                                 }
                             }
                         </td>
-
                     </tr>
                 }
             </tbody>
@@ -150,102 +143,58 @@
     </div>
 </div>
 
-@section scripts{
+@section Scripts {
     <script>
-        (function () {
-            function init() {
-                // ---- Filtering (unchanged) ---------------------------
-                var role = document.getElementById('filterRole');
-                var active = document.getElementById('filterActive');
-                var approved = document.getElementById('filterApproved');
-                var search = document.getElementById('searchUsers');
-                var btnApply = document.getElementById('btnApplyFilters');
-                var btnClear = document.getElementById('btnClearFilters');
-                var rows = Array.prototype.slice.call(document.querySelectorAll('#usersTable tbody tr'));
-
-                function rowText(tr) {
-                    var tds = tr.getElementsByTagName('td'), s = '';
-                    for (var i = 0; i < tds.length; i++) s += ' ' + (tds[i].innerText || tds[i].textContent || '');
-                    return s.toLowerCase();
+        $(function () {
+            // Initialize DataTable
+            var table = $('#usersTable').DataTable({
+                pageLength: 10,
+                lengthMenu: [5, 10, 25, 50],
+                ordering: true,
+                responsive: true,
+                columnDefs: [
+                    { orderable: false, targets: [6] } // disable sorting on "Actions" column
+                ],
+                language: {
+                    search: "Search users:",
+                    lengthMenu: "Show _MENU_ users",
+                    info: "Showing _START_ to _END_ of _TOTAL_ users"
                 }
-                function applyFilters() {
-                    var r = ((role && role.value) || '').toLowerCase();
-                    var a = ((active && active.value) || '');
-                    var ap = ((approved && approved.value) || '');
-                    var q = ((search && search.value) || '').toLowerCase();
+            });
 
-                    rows.forEach(function (tr) {
-                        var okRole = !r || ((tr.getAttribute('data-role') || '').toLowerCase() === r);
-                        var okActive = !a || ((tr.getAttribute('data-active') || '') === a);
-                        var okApproved = !ap || ((tr.getAttribute('data-approved') || '') === ap);
-                        var okQuery = !q || (rowText(tr).indexOf(q) !== -1);
-                        tr.style.display = (okRole && okActive && okApproved && okQuery) ? '' : 'none';
-                    });
-                }
-                var t = null;
-                function debouncedApply() { clearTimeout(t); t = setTimeout(applyFilters, 220); }
+            // Hook dropdown filters
+            $('#filterRole').on('change', function () {
+                table.column(0).search(this.value).draw();
+            });
+            $('#filterActive').on('change', function () {
+                table.column(3).search(this.value).draw();
+            });
+            $('#filterApproved').on('change', function () {
+                table.column(4).search(this.value).draw();
+            });
 
-                if (role) role.addEventListener('change', applyFilters);
-                if (active) active.addEventListener('change', applyFilters);
-                if (approved) approved.addEventListener('change', applyFilters);
-                if (search) search.addEventListener('input', debouncedApply);
-                if (btnApply) btnApply.addEventListener('click', applyFilters);
-                if (btnClear) btnClear.addEventListener('click', function () {
-                    if (role) role.value = '';
-                    if (active) active.value = '';
-                    if (approved) approved.value = '';
-                    if (search) search.value = '';
-                    applyFilters();
+            // Bootstrap confirm modal
+            var modalEl = document.getElementById('confirmModal');
+            var titleEl = document.getElementById('confirmTitle');
+            var msgEl = document.getElementById('confirmMessage');
+            var yesBtn = document.getElementById('confirmYes');
+            var targetForm = null;
+            var bsModal = new bootstrap.Modal(modalEl);
+
+            document.querySelectorAll('.js-confirm-submit').forEach(function (btn) {
+                btn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    targetForm = document.getElementById(btn.getAttribute('data-form-id'));
+                    titleEl.textContent = btn.getAttribute('data-title') || 'Confirm';
+                    msgEl.textContent = btn.getAttribute('data-message') || 'Are you sure?';
+                    yesBtn.className = 'btn btn-' + (btn.getAttribute('data-variant') || 'primary');
+                    bsModal.show();
                 });
-                applyFilters();
+            });
 
-                // ---- Bootstrap Confirm Modal wiring -------------------
-                var modalEl = document.getElementById('confirmModal');
-                var titleEl = document.getElementById('confirmTitle');
-                var msgEl = document.getElementById('confirmMessage');
-                var yesBtn = document.getElementById('confirmYes');
-                var bsModal = null;
-                var targetForm = null;
-
-                if (modalEl && window.bootstrap && window.bootstrap.Modal) {
-                    bsModal = new window.bootstrap.Modal(modalEl);
-                }
-
-                Array.prototype.forEach.call(document.querySelectorAll('.js-confirm-submit'), function (btn) {
-                    btn.addEventListener('click', function (e) {
-                        e.preventDefault();
-                        var formId = btn.getAttribute('data-form-id');
-                        var title = btn.getAttribute('data-title') || 'Confirm';
-                        var message = btn.getAttribute('data-message') || 'Are you sure?';
-                        var variant = btn.getAttribute('data-variant') || 'primary';
-
-                        targetForm = document.getElementById(formId);
-                        if (!targetForm || !bsModal) return;
-
-                        if (titleEl) titleEl.textContent = title;
-                        if (msgEl) msgEl.textContent = message;
-
-                        yesBtn.className = 'btn btn-' + variant;
-                        bsModal.show();
-                    });
-                });
-
-                if (yesBtn) {
-                    yesBtn.addEventListener('click', function () {
-                        if (targetForm) targetForm.submit();
-                    });
-                }
-            }
-
-            // Wait for DOM, then ensure Bootstrap is present
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', function () {
-                    if (window.bootstrap) init(); else window.addEventListener('load', init);
-                });
-            } else {
-                if (window.bootstrap) init(); else window.addEventListener('load', init);
-            }
-        })();
+            yesBtn.addEventListener('click', function () {
+                if (targetForm) targetForm.submit();
+            });
+        });
     </script>
 }
-

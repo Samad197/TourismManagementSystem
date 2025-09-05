@@ -11,13 +11,25 @@
     var paymentQueue = ViewBag.PaymentQueue as IEnumerable<dynamic>;
 }
 
-<!-- Header -->
+<!-- Header Start -->
 <div class="container-fluid bg-breadcrumb">
+    <div class="container text-center py-5" style="max-width: 900px;">
+        <h3 class="text-white display-3 mb-4">Admin Dashboard</h3>
+        <ol class="breadcrumb justify-content-center mb-0">
+            <li class="breadcrumb-item"><a href="@Url.Action("Index", "Home")">Home</a></li>
+            @*<li class="breadcrumb-item"><a href="@Url.Action("Index", "Package")">My Packages</a></li>*@
+        <li class="breadcrumb-item active text-white">Admin Dashboard</li>
+        </ol>
+    </div>
+</div>
+<!-- Header End -->
+<!-- Header -->
+@*<div class="container-fluid bg-breadcrumb">
     <div class="container text-center py-5" style="max-width:900px;">
         <h3 class="text-white display-3 mb-4">Admin Dashboard</h3>
         <p class="text-white-50 mb-0">Platform overview, approvals, payments & reports</p>
     </div>
-</div>
+</div>*@
 
 <!-- Flash -->
 @Html.Partial("_Flash")
@@ -25,32 +37,32 @@
 <div class="container py-4">
 
     <!-- Date Range (for reports/metrics) -->
-    <div class="card shadow-sm mb-3">
-        <div class="card-body">
-            @using (Html.BeginForm("Dashboard", "Admin", FormMethod.Get, new { @class = "row g-2 align-items-end" }))
-            {
-                <div class="col-md-3">
-                    <label class="form-label">From</label>
-                    <input type="date" name="from" class="form-control" value="@Request["from"]" />
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">To</label>
-                    <input type="date" name="to" class="form-control" value="@Request["to"]" />
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <button class="btn btn-primary mt-3 mt-md-0" type="submit">
-                        <i class="fas fa-filter me-1"></i> Apply
-                    </button>
-                    <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"] })">
-                        <i class="fas fa-chart-line me-1"></i> Open Reports
-                    </a>
-                    <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"], export = "csv" })">
-                        <i class="fas fa-file-csv me-1"></i> Export CSV
-                    </a>
-                </div>
-            }
-        </div>
-    </div>
+    @*<div class="card shadow-sm mb-3">
+            <div class="card-body">
+                @using (Html.BeginForm("Dashboard", "Admin", FormMethod.Get, new { @class = "row g-2 align-items-end" }))
+                {
+                    <div class="col-md-3">
+                        <label class="form-label">From</label>
+                        <input type="date" name="from" class="form-control" value="@Request["from"]" />
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">To</label>
+                        <input type="date" name="to" class="form-control" value="@Request["to"]" />
+                    </div>
+                    <div class="col-md-6 text-md-end">
+                        <button class="btn btn-primary mt-3 mt-md-0" type="submit">
+                            <i class="fas fa-filter me-1"></i> Apply
+                        </button>
+                        <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"] })">
+                            <i class="fas fa-chart-line me-1"></i> Open Reports
+                        </a>
+                        <a class="btn btn-outline-secondary mt-3 mt-md-0" href="@Url.Action("Reports", "Admin", new { from = Request["from"], to = Request["to"], export = "csv" })">
+                            <i class="fas fa-file-csv me-1"></i> Export CSV
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>*@
 
     <!-- KPI Cards -->
     <div class="row g-3 mb-3">
@@ -85,7 +97,9 @@
         <div class="col-md-2">
             <div class="card p-3 shadow-sm h-100">
                 <div class="text-muted">Paid Revenue</div>
-                <div class="h4 mb-0">@Model.PaidRevenue.ToString("C0")</div>
+                <div class="h4 mb-0"> @Model.PaidRevenue.ToString("C", new System.Globalization.CultureInfo("en-AU"))</div>
+               </p>
+
                 <span class="small text-muted">All time</span>
             </div>
         </div>
@@ -116,8 +130,12 @@
         </div>
 
         <!-- Payment Verification (optional, if you want Admin to manage payment status) -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm h-100">
+        @*<div class="col-lg-4">*@
+
+
+
+
+        @*<div class="card shadow-sm h-100">
                 <div class="card-header bg-light fw-bold">Payments to Verify</div>
                 <div class="card-body p-0">
                     @if (paymentQueue != null && paymentQueue.Any())
@@ -172,8 +190,8 @@
                         <i class="fas fa-receipt me-1"></i> Payment Reports
                     </a>
                 </div>
-            </div>
-        </div>
+            </div>*@
+        @*</div>*@
 
         <!-- Recent Booking Activity -->
         <!-- Recent Booking Activity -->
@@ -193,7 +211,8 @@
                                             <div class="text-muted">by @b.CustomerName • @b.CreatedAt.ToString("dd MMM HH:mm")</div>
                                         </div>
                                         <div class="text-end">
-                                            <div class="small">@b.Amount.ToString("C0")</div>
+                                            <div class="small">@b.Amount.ToString("C0", new System.Globalization.CultureInfo("en-AU"))</div>
+
                                             <span class="badge @(b.PaymentStatus == "Paid" ? "bg-success" : "bg-secondary")">
                                                 @b.PaymentStatus
                                             </span>
@@ -229,5 +248,12 @@
         <a class="btn btn-outline-primary ms-2" href="@Url.Action("Reports","Admin")">
             <i class="fas fa-chart-line me-1"></i> Reports
         </a>
+
+        <a class="btn btn-outline-secondary btn-sm"
+           href="@Url.Action("Reports","Admin", new { section = "payments" })">
+            <i class="fas fa-receipt me-1"></i> View Payment Reports
+        </a>
+
+
     </div>
 </div>
