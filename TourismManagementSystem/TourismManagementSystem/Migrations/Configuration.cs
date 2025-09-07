@@ -34,7 +34,7 @@
                 {
                     FullName = "Admin User",
                     Email = adminEmail,
-                    PasswordHash = Sha256("Admin@123"),    // change later if you like
+                    PasswordHash = Sha256("admin123"),    // change later if you like
                     RoleId = adminRoleId,
                     IsActive = true,
                     IsApproved = true,                     // admin doesn’t need approval
