@@ -157,7 +157,6 @@
     <Compile Include="Models\TourImages.cs" />
     <Compile Include="Models\TouristProfile.cs" />
     <Compile Include="Models\TourPackage.cs" />
-    <Compile Include="Models\User.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
