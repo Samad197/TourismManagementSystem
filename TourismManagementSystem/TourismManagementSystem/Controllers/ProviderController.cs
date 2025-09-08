@@ -321,5 +321,48 @@ namespace TourismManagementSystem.Controllers
             return RedirectToAction("Profile"); // back to profile check
         }
 
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ApproveBooking(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.IsApproved = true;
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = "Approved" });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult RejectBooking(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.IsApproved = false;
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = "Rejected" });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult TogglePayment(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.PaymentStatus =
+                string.Equals(booking.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                    ? "Pending" : "Paid";
+
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = booking.PaymentStatus });
+        }
+
     }
 }

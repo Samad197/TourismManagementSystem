@@ -21,9 +21,9 @@ namespace TourismManagementSystem
             RouteConfig.RegisterRoutes(RouteTable.Routes);
             BundleConfig.RegisterBundles(BundleTable.Bundles);
 
-            Database.SetInitializer(
-      new MigrateDatabaseToLatestVersion<TourismDbContext, TourismManagementSystem.Migrations.Configuration>()
-  );
+  //          Database.SetInitializer(
+  //    new MigrateDatabaseToLatestVersion<TourismDbContext, TourismManagementSystem.Migrations.Configuration>()
+  //);
         }
 
         protected void Application_PostAuthenticateRequest(object sender, EventArgs e)

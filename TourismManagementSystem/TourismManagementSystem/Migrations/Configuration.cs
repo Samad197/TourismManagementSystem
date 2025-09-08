@@ -6,7 +6,8 @@
     using System.Linq;
     using TourismManagementSystem.Models;
 
-    internal sealed class Configuration : DbMigrationsConfiguration<TourismManagementSystem.Data.TourismDbContext>
+    internal sealed class Configuration
+        : DbMigrationsConfiguration<TourismManagementSystem.Data.TourismDbContext>
     {
         public Configuration()
         {
@@ -15,43 +16,46 @@
 
         protected override void Seed(TourismManagementSystem.Data.TourismDbContext context)
         {
-            // 1) Ensure roles
+            // 1) Ensure Roles exist
             string[] roleNames = { "Admin", "Agency", "Guide", "Tourist" };
-            foreach (var r in roleNames)
+
+            foreach (var roleName in roleNames)
             {
-                if (!context.Roles.Any(x => x.RoleName == r))
-                    context.Roles.Add(new Role { RoleName = r });
+                if (!context.Roles.Any(r => r.RoleName == roleName))
+                {
+                    context.Roles.Add(new Role { RoleName = roleName });
+                }
             }
             context.SaveChanges();
 
-            // 2) Ensure admin user
+            // 2) Ensure a default Admin user
             var adminEmail = "admin@gmail.com";
             if (!context.Users.Any(u => u.Email == adminEmail))
             {
-                var adminRoleId = context.Roles.Single(x => x.RoleName == "Admin").RoleId;
+                var adminRoleId = context.Roles.Single(r => r.RoleName == "Admin").RoleId;
 
                 context.Users.Add(new User
                 {
                     FullName = "Admin User",
                     Email = adminEmail,
-                    PasswordHash = Sha256("admin123"),    // change later if you like
+                    PasswordHash = Sha256("admin123"),   // ⚠️ temporary password
                     RoleId = adminRoleId,
                     IsActive = true,
-                    IsApproved = true,                     // admin doesn’t need approval
+                    IsApproved = true,
                     EmailConfirmed = true,
                     CreatedAt = DateTime.UtcNow
                 });
+
                 context.SaveChanges();
             }
         }
 
-
-        // same hashing as your AccountController
-        private static string Sha256(string s)
+        // helper for password hashing
+        private static string Sha256(string input)
         {
             using (var sha = System.Security.Cryptography.SHA256.Create())
             {
-                var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(s ?? ""));
+                var bytes = sha.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input ?? ""));
                 return string.Concat(bytes.Select(b => b.ToString("x2")));
             }
         }

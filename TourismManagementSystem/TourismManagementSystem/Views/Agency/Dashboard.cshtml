@@ -285,7 +285,7 @@
 <div class="modal fade" id="bookingDecisionModal" tabindex="-1" aria-labelledby="bookingDecisionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            @using (Html.BeginForm("ApproveBooking", "Agency", FormMethod.Post, new { id = "bookingDecisionForm" }))
+            @using (Html.BeginForm("ApproveBooking", "Provider", FormMethod.Post, new { id = "bookingDecisionForm" }))
             {
                 @Html.AntiForgeryToken()
                 <div class="modal-header">
@@ -432,15 +432,15 @@
 
     if(approveBtn){
       e.preventDefault();
-      toggleBooking(approveBtn,'@Url.Action("ApproveBooking","Agency")',"approval");
+      toggleBooking(approveBtn,'@Url.Action("ApproveBooking", "Provider")',"approval");
     }
     if(rejectBtn){
       e.preventDefault();
-      toggleBooking(rejectBtn,'@Url.Action("RejectBooking","Agency")',"approval");
+      toggleBooking(rejectBtn,'@Url.Action("RejectBooking", "Provider")',"approval");
     }
     if(payBtn){
       e.preventDefault();
-      toggleBooking(payBtn,'@Url.Action("TogglePayment","Agency")',"payment");
+      toggleBooking(payBtn,'@Url.Action("TogglePayment", "Provider")',"payment");
     }
   });
 

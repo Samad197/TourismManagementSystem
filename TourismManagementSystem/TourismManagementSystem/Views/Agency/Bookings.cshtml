@@ -242,15 +242,15 @@
 
                 if (approveBtn) {
                     e.preventDefault();
-                    toggleBooking(approveBtn, '@Url.Action("ApproveBooking","Agency")', "approval");
+                    toggleBooking(approveBtn, '@Url.Action("ApproveBooking", "Provider")', "approval");
                 }
                 if (rejectBtn) {
                     e.preventDefault();
-                    toggleBooking(rejectBtn, '@Url.Action("RejectBooking","Agency")', "approval");
+                    toggleBooking(rejectBtn, '@Url.Action("RejectBooking", "Provider")', "approval");
                 }
                 if (payBtn) {
                     e.preventDefault();
-                    toggleBooking(payBtn, '@Url.Action("TogglePayment","Agency")', "payment");
+                    toggleBooking(payBtn, '@Url.Action("TogglePayment", "Provider")', "payment");
                 }
             });
         })();

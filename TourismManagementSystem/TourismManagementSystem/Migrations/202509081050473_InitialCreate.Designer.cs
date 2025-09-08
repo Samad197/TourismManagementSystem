@@ -7,13 +7,13 @@ namespace TourismManagementSystem.Migrations
     using System.Resources;
     
     [GeneratedCode("EntityFramework.Migrations", "6.5.1")]
-    public sealed partial class AddPaidAtToBooking : IMigrationMetadata
+    public sealed partial class InitialCreate : IMigrationMetadata
     {
-        private readonly ResourceManager Resources = new ResourceManager(typeof(AddPaidAtToBooking));
+        private readonly ResourceManager Resources = new ResourceManager(typeof(InitialCreate));
         
         string IMigrationMetadata.Id
         {
-            get { return "202508291248210_AddPaidAtToBooking"; }
+            get { return "202509081050473_InitialCreate"; }
         }
         
         string IMigrationMetadata.Source

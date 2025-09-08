@@ -148,61 +148,13 @@
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\202508250819133_InitialBaseline.cs" />
-    <Compile Include="Migrations\202508250819133_InitialBaseline.Designer.cs">
-      <DependentUpon>202508250819133_InitialBaseline.cs</DependentUpon>
+    <Compile Include="Migrations\202509081050473_InitialCreate.cs" />
+    <Compile Include="Migrations\202509081050473_InitialCreate.Designer.cs">
+      <DependentUpon>202509081050473_InitialCreate.cs</DependentUpon>
     </Compile>
-    <Compile Include="Migrations\202508251011032_AddUserApprovalAndFlags.cs" />
-    <Compile Include="Migrations\202508251011032_AddUserApprovalAndFlags.Designer.cs">
-      <DependentUpon>202508251011032_AddUserApprovalAndFlags.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.cs" />
-    <Compile Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.Designer.cs">
-      <DependentUpon>202508251037551_MakeFeedbackSharedPkWithBooking.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508251338044_MakeSessionBasedBooking.cs" />
-    <Compile Include="Migrations\202508251338044_MakeSessionBasedBooking.Designer.cs">
-      <DependentUpon>202508251338044_MakeSessionBasedBooking.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508260600445_SeedAdminAndRoles.cs" />
-    <Compile Include="Migrations\202508260600445_SeedAdminAndRoles.Designer.cs">
-      <DependentUpon>202508260600445_SeedAdminAndRoles.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508261000209_FixFeedbackRelation.cs" />
-    <Compile Include="Migrations\202508261000209_FixFeedbackRelation.Designer.cs">
-      <DependentUpon>202508261000209_FixFeedbackRelation.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508261404458_AddSessionsTable.cs" />
-    <Compile Include="Migrations\202508261404458_AddSessionsTable.Designer.cs">
-      <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508270754024_UpdateTourismDb.cs" />
-    <Compile Include="Migrations\202508270754024_UpdateTourismDb.Designer.cs">
-      <DependentUpon>202508270754024_UpdateTourismDb.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508271031076_FixBookingSessionFK.cs" />
-    <Compile Include="Migrations\202508271031076_FixBookingSessionFK.Designer.cs">
-      <DependentUpon>202508271031076_FixBookingSessionFK.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508271037318_FixBookingSessionFK1.cs" />
-    <Compile Include="Migrations\202508271037318_FixBookingSessionFK1.Designer.cs">
-      <DependentUpon>202508271037318_FixBookingSessionFK1.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508271051307_PendingChanges.cs" />
-    <Compile Include="Migrations\202508271051307_PendingChanges.Designer.cs">
-      <DependentUpon>202508271051307_PendingChanges.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.cs" />
-    <Compile Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.Designer.cs">
-      <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508290633375_TouristModelsAdjustments.cs" />
-    <Compile Include="Migrations\202508290633375_TouristModelsAdjustments.Designer.cs">
-      <DependentUpon>202508290633375_TouristModelsAdjustments.cs</DependentUpon>
-    </Compile>
-    <Compile Include="Migrations\202508291248210_AddPaidAtToBooking.cs" />
-    <Compile Include="Migrations\202508291248210_AddPaidAtToBooking.Designer.cs">
-      <DependentUpon>202508291248210_AddPaidAtToBooking.cs</DependentUpon>
+    <Compile Include="Migrations\202509081146533_InitialCreate1.cs" />
+    <Compile Include="Migrations\202509081146533_InitialCreate1.Designer.cs">
+      <DependentUpon>202509081146533_InitialCreate1.cs</DependentUpon>
     </Compile>
     <Compile Include="Migrations\Configuration.cs" />
     <Compile Include="Models\AgencyProfile.cs" />
@@ -525,47 +477,11 @@
     <Content Include="Scripts\jquery-3.4.1.min.map" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Migrations\202508250819133_InitialBaseline.resx">
-      <DependentUpon>202508250819133_InitialBaseline.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202509081050473_InitialCreate.resx">
+      <DependentUpon>202509081050473_InitialCreate.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508251011032_AddUserApprovalAndFlags.resx">
-      <DependentUpon>202508251011032_AddUserApprovalAndFlags.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508251037551_MakeFeedbackSharedPkWithBooking.resx">
-      <DependentUpon>202508251037551_MakeFeedbackSharedPkWithBooking.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508251338044_MakeSessionBasedBooking.resx">
-      <DependentUpon>202508251338044_MakeSessionBasedBooking.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508260600445_SeedAdminAndRoles.resx">
-      <DependentUpon>202508260600445_SeedAdminAndRoles.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508261000209_FixFeedbackRelation.resx">
-      <DependentUpon>202508261000209_FixFeedbackRelation.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508261404458_AddSessionsTable.resx">
-      <DependentUpon>202508261404458_AddSessionsTable.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508270754024_UpdateTourismDb.resx">
-      <DependentUpon>202508270754024_UpdateTourismDb.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508271031076_FixBookingSessionFK.resx">
-      <DependentUpon>202508271031076_FixBookingSessionFK.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508271037318_FixBookingSessionFK1.resx">
-      <DependentUpon>202508271037318_FixBookingSessionFK1.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508271051307_PendingChanges.resx">
-      <DependentUpon>202508271051307_PendingChanges.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508271232332_AddBookingStatusAndCustomerName.resx">
-      <DependentUpon>202508271232332_AddBookingStatusAndCustomerName.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508290633375_TouristModelsAdjustments.resx">
-      <DependentUpon>202508290633375_TouristModelsAdjustments.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="Migrations\202508291248210_AddPaidAtToBooking.resx">
-      <DependentUpon>202508291248210_AddPaidAtToBooking.cs</DependentUpon>
+    <EmbeddedResource Include="Migrations\202509081146533_InitialCreate1.resx">
+      <DependentUpon>202509081146533_InitialCreate1.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
   <PropertyGroup>
