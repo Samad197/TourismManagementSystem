@@ -124,9 +124,10 @@ namespace TourismManagementSystem.Controllers
                 pkg.GuideId = me.UserId;
 
             db.TourPackages.Add(pkg);
+            SaveImages(vm.Images, pkg.PackageId);
             db.SaveChanges();
 
-            SaveImages(vm.Images, pkg.PackageId);
+           
 
             TempData["Success"] = "Package created. You can now add sessions (dates) and images.";
             return RedirectToAction("Index");

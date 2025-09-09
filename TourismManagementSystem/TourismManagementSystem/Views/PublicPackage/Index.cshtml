@@ -1,24 +1,4 @@
-﻿@*@model IEnumerable<TourismManagementSystem.Models.ViewModels.PublicPackageListItemVm>
-
-    @{
-        ViewBag.Title = "Packages";
-
-        // Role awareness only affects Book Now behavior (login gate for non-tourists)
-        bool isAuth = User?.Identity?.IsAuthenticated ?? false;
-        bool isTourist = isAuth && User.IsInRole("Tourist");
-
-        Func<int, string> detailsUrl = id => Url.Action("Details", "PublicPackage", new { id });
-        Func<int, string> bookEntryUrl = id =>
-            isTourist
-                ? detailsUrl(id) // go to details to pick a session
-                : Url.Action("Login", "Account", new { returnUrl = detailsUrl(id) });
-
-        // Tiny helpers
-        Func<string, string> money = val => val; // using ToString("C") below
-        string FallbackImg(string path) => string.IsNullOrWhiteSpace(path)
-            ? Url.Content("~/Content/img/packages-1.jpg")
-            : Url.Content(path);
-    }*@
+﻿
 
 @model IEnumerable<TourismManagementSystem.Models.ViewModels.PublicPackageListItemVm>
 
@@ -42,6 +22,9 @@
         string.IsNullOrWhiteSpace(path)
             ? Url.Content("~/Content/img/packages-1.jpg")
             : Url.Content(path);
+
+    var packageCount = Model?.Count() ?? 0;
+
 }
 
 <style>
@@ -143,7 +126,7 @@
     <div class="container py-5">
         <div class="mx-auto text-center mb-5" style="max-width: 900px;">
             <h5 class="section-title px-3">Packages</h5>
-            <h1 class="mb-0">Available  Packages</h1>
+            <h1 class="mb-0">Available Packages</h1>
         </div>
 
         @if (Model == null || !Model.Any())
@@ -152,18 +135,18 @@
                 No packages are available right now. Please check back soon.
             </div>
         }
-        else
+        else if (packageCount == 1)
         {
-            <div class="packages-carousel owl-carousel">
-                @foreach (var pkg in Model)
-                {
-                    var img = FallbackImg(pkg.ThumbnailPath);
+            <!-- Single package (no carousel) -->
+            var pkg = Model.First();
+            var img = FallbackImg(pkg.ThumbnailPath);
 
+            <div class="row justify-content-center">
+                <div class="col-md-6">
                     <div class="packages-item">
                         <div class="packages-img">
                             <img src="@img" alt="@pkg.Title" class="img-fluid w-100 rounded-top" />
 
-                            <!-- Package Info -->
                             <div class="packages-info d-flex border border-start-0 border-end-0 position-absolute">
                                 <small class="flex-fill text-center border-end py-2">
                                     <i class="fa fa-user-tie me-2"></i>@pkg.OwnerName (@pkg.OwnerType)
@@ -176,7 +159,6 @@
                                 </small>
                             </div>
 
-                            <!-- Price -->
                             <div class="packages-price py-2 px-3">
                                 @pkg.Price.ToString("C", new System.Globalization.CultureInfo("en-AU"))
                             </div>
@@ -200,26 +182,12 @@
                                     }
                                 </small>
 
-                                <!-- Optional ratings -->
-                                @*
-                                    <div class="mb-3 mt-2">
-                                        @{
-                                            var full = (int)Math.Round(pkg.AvgRating ?? 0);
-                                            for (int i = 0; i < 5; i++)
-                                            {
-                                                <small class="fa fa-star @(i < full ? "star" : "star-muted")"></small>
-                                            }
-                                        }
-                                    </div>
-                                *@
-
                                 <p class="mb-4 mt-2 small text-muted">
                                     Managed by <strong>@pkg.OwnerName</strong>.
                                     Capacity up to <strong>@pkg.MaxGroupSize</strong> guests.
                                 </p>
                             </div>
 
-                            <!-- Actions -->
                             <div class="actions-bar row bg-primary rounded-bottom mx-0">
                                 <div class="col-12 text-center px-0">
                                     @if (pkg.HasAvailableSession)
@@ -237,7 +205,158 @@
                                     }
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        }
+        else if (packageCount <= 3)
+        {
+            <!-- 2–3 packages (grid layout) -->
+            <div class="row">
+                @foreach (var pkg in Model)
+                {
+                    var img = FallbackImg(pkg.ThumbnailPath);
 
+                    <div class="col-md-4 mb-4">
+                        <div class="packages-item">
+                            <div class="packages-img">
+                                <img src="@img" alt="@pkg.Title" class="img-fluid w-100 rounded-top" />
+
+                                <div class="packages-info d-flex border border-start-0 border-end-0 position-absolute">
+                                    <small class="flex-fill text-center border-end py-2">
+                                        <i class="fa fa-user-tie me-2"></i>@pkg.OwnerName (@pkg.OwnerType)
+                                    </small>
+                                    <small class="flex-fill text-center border-end py-2">
+                                        <i class="fa fa-calendar-alt me-2"></i>@pkg.DurationDays day@(pkg.DurationDays == 1 ? "" : "s")
+                                    </small>
+                                    <small class="flex-fill text-center py-2">
+                                        <i class="fa fa-user me-2"></i>@pkg.MaxGroupSize Person@(pkg.MaxGroupSize == 1 ? "" : "s")
+                                    </small>
+                                </div>
+
+                                <div class="packages-price py-2 px-3">
+                                    @pkg.Price.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+                                </div>
+                            </div>
+
+                            <div class="packages-content bg-light">
+                                <div class="p-4 pb-0">
+                                    <h5 class="mb-0">@pkg.Title</h5>
+                                    <small class="text-uppercase">
+                                        @if (pkg.HasAvailableSession)
+                                        {
+                                            @:Available to Book
+                                        }
+                                        else if (pkg.HasUpcoming)
+                                        {
+                                            @:Fully Booked
+                                        }
+                                        else
+                                        {
+                                            @:No Upcoming Sessions
+                                        }
+                                    </small>
+
+                                    <p class="mb-4 mt-2 small text-muted">
+                                        Managed by <strong>@pkg.OwnerName</strong>.
+                                        Capacity up to <strong>@pkg.MaxGroupSize</strong> guests.
+                                    </p>
+                                </div>
+
+                                <div class="actions-bar row bg-primary rounded-bottom mx-0">
+                                    <div class="col-12 text-center px-0">
+                                        @if (pkg.HasAvailableSession)
+                                        {
+                                            <a href="@bookEntryUrl(pkg.PackageId)"
+                                               class="btn-hover btn text-white py-2 px-4">Book Now</a>
+                                        }
+                                        else if (pkg.HasUpcoming)
+                                        {
+                                            <span class="btn btn-danger text-white py-2 px-4 disabled">Fully Booked</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="btn btn-secondary text-white py-2 px-4 disabled">No Sessions</span>
+                                        }
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <!-- More than 3 packages (carousel) -->
+            <div class="packages-carousel owl-carousel">
+                @foreach (var pkg in Model)
+                {
+                    var img = FallbackImg(pkg.ThumbnailPath);
+
+                    <div class="packages-item">
+                        <div class="packages-img">
+                            <img src="@img" alt="@pkg.Title" class="img-fluid w-100 rounded-top" />
+
+                            <div class="packages-info d-flex border border-start-0 border-end-0 position-absolute">
+                                <small class="flex-fill text-center border-end py-2">
+                                    <i class="fa fa-user-tie me-2"></i>@pkg.OwnerName (@pkg.OwnerType)
+                                </small>
+                                <small class="flex-fill text-center border-end py-2">
+                                    <i class="fa fa-calendar-alt me-2"></i>@pkg.DurationDays day@(pkg.DurationDays == 1 ? "" : "s")
+                                </small>
+                                <small class="flex-fill text-center py-2">
+                                    <i class="fa fa-user me-2"></i>@pkg.MaxGroupSize Person@(pkg.MaxGroupSize == 1 ? "" : "s")
+                                </small>
+                            </div>
+
+                            <div class="packages-price py-2 px-3">
+                                @pkg.Price.ToString("C", new System.Globalization.CultureInfo("en-AU"))
+                            </div>
+                        </div>
+
+                        <div class="packages-content bg-light">
+                            <div class="p-4 pb-0">
+                                <h5 class="mb-0">@pkg.Title</h5>
+                                <small class="text-uppercase">
+                                    @if (pkg.HasAvailableSession)
+                                    {
+                                        @:Available to Book
+                                    }
+                                    else if (pkg.HasUpcoming)
+                                    {
+                                        @:Fully Booked
+                                    }
+                                    else
+                                    {
+                                        @:No Upcoming Sessions
+                                    }
+                                </small>
+
+                                <p class="mb-4 mt-2 small text-muted">
+                                    Managed by <strong>@pkg.OwnerName</strong>.
+                                    Capacity up to <strong>@pkg.MaxGroupSize</strong> guests.
+                                </p>
+                            </div>
+
+                            <div class="actions-bar row bg-primary rounded-bottom mx-0">
+                                <div class="col-12 text-center px-0">
+                                    @if (pkg.HasAvailableSession)
+                                    {
+                                        <a href="@bookEntryUrl(pkg.PackageId)"
+                                           class="btn-hover btn text-white py-2 px-4">Book Now</a>
+                                    }
+                                    else if (pkg.HasUpcoming)
+                                    {
+                                        <span class="btn btn-danger text-white py-2 px-4 disabled">Fully Booked</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="btn btn-secondary text-white py-2 px-4 disabled">No Sessions</span>
+                                    }
+                                </div>
+                            </div>
                         </div>
                     </div>
                 }
@@ -247,15 +366,14 @@
 </div>
 <!-- Packages End -->
 
-
-
 @section scripts {
-    <!-- Ensure OwlCarousel is initialized. If your main.js already does this, you can remove the block below. -->
     <script>
-        (function () {
-            var $carousel = $('.packages-carousel');
-            if ($carousel.length && !$carousel.hasClass('owl-loaded')) {
-                $carousel.owlCarousel({
+        $(document).ready(function () {
+            var packageCount = @(Model?.Count() ?? 0);
+
+            // Only init carousel if more than 3
+            if (packageCount > 3) {
+                $('.packages-carousel').owlCarousel({
                     autoplay: true,
                     smartSpeed: 800,
                     margin: 25,
@@ -269,11 +387,11 @@
                     responsive: {
                         0: { items: 1 },
                         576: { items: 1 },
-                        768: { items: 2 },
+                        768: { items: 3 },
                         992: { items: 3 }
                     }
                 });
             }
-        })();
+        });
     </script>
 }

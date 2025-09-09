@@ -132,7 +132,11 @@
         <div class="row">
             <div class="col-md-6 mb-3">
                 @Html.LabelFor(m => m.Phone, new { @class = "form-label fw-semibold" })
-                @Html.TextBoxFor(m => m.Phone, new { @class = "form-control", placeholder = "+92 3XX XXX XXXX", pattern = @"^\+?\d[\d\s\-]{6,}$", title = "Enter a valid phone number" })
+                @Html.TextBoxFor(m => m.Phone, new { @class = "form-control",
+               placeholder = "+61 4XX XXX XXX",
+               pattern = @"^(\+61\s?4\d{2}\s?\d{3}\s?\d{3}|04\d{2}\s?\d{3}\s?\d{3})$",
+               title = "Enter a valid Australian mobile number"
+           })
                 @Html.ValidationMessageFor(m => m.Phone, "", new { @class = "text-danger" })
             </div>
             <div class="col-md-6 mb-3">

@@ -356,7 +356,7 @@ string.Equals(ViewBag.ActivePage as string, name, System.StringComparison.Ordina
 
 
                 }
-                else if (canManage)
+                else if (isAgency || isGuide)
                 {
                     <a href="@Url.Action("Create","Package")" class="btn btn-primary rounded-pill py-2 px-4 ms-lg-4">Create Package</a>
                 }

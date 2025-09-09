@@ -13,7 +13,7 @@
 @Html.Partial("_Flash")
 
 <div class="container py-4">
-    @if (!Model.Any())
+    @if (Model == null || !Model.Any())
     {
         <div class="alert alert-success">No pending Agencies or Guides.</div>
     }

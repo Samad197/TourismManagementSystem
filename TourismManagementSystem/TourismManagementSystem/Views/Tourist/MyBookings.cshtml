@@ -40,7 +40,7 @@
     @if (TempData["Error"] != null)
     {<div class="alert alert-danger">@TempData["Error"]</div>}
 
-    @if (!Model.Any())
+    @if (Model == null || !Model.Any())
     {
         <div class="alert alert-info">You have no upcoming bookings.</div>
     }

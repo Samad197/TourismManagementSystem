@@ -24,7 +24,7 @@
         </a>
     </div>
 
-    @if (!Model.Any())
+    @if (Model == null || !Model.Any())
     {
         <div class="alert alert-info">
             No packages yet. Click <strong>Create Package</strong> to add your first tour.
@@ -63,7 +63,7 @@
                                         <i class="fas fa-pencil-alt"></i> Edit
                                     </a>
 
-                                   
+
 
                                     <a class="btn btn-sm btn-outline-success"
                                        href="@Url.Action("Create", "PackageSessions", new { packageId = p.PackageId })"

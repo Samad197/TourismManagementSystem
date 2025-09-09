@@ -34,7 +34,7 @@
     @Html.Partial("_Flash")
 
 
-    @if (!Model.Any())
+    @if (Model == null || !Model.Any())
     {
         <div class="alert alert-info">No completed bookings yet.</div>
     }
