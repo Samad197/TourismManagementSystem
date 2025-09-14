@@ -148,7 +148,115 @@ namespace TourismManagementSystem.Controllers
 
         // ========= DASHBOARD =========
         [HttpGet]
+       
         public ActionResult Dashboard()
+        {
+            var me = GetMe();
+            if (me == null) return RedirectToAction("Login", "Account");
+
+            var providerId = me.UserId;
+            var today = DateTime.Today;
+
+            bool isAgency = IsAgency(me);
+            bool isGuide = IsGuide(me);
+
+            // Variables for Agency and Guide Dashboard Data
+            IQueryable<TourPackage> myPackages = null;
+            IQueryable<Session> mySessions = null;
+            IQueryable<Booking> myBookings = null;
+
+            // For Agency: Filter based on AgencyId
+            if (isAgency)
+            {
+                myPackages = db.TourPackages.Where(p => p.AgencyId == providerId);
+                mySessions = db.Sessions.Include(s => s.Package)
+                                        .Where(s => s.Package.AgencyId == providerId);
+                myBookings = db.Bookings.Include(b => b.Session.Package)
+                                        .Where(b => b.Session.Package.AgencyId == providerId);
+            }
+            // For Guide: Filter based on GuideId
+            else if (isGuide)
+            {
+                myPackages = db.TourPackages.Where(p => p.GuideId == providerId);
+                mySessions = db.Sessions.Include(s => s.Package)
+                                        .Where(s => s.Package.GuideId == providerId);
+                myBookings = db.Bookings.Include(b => b.Session.Package)
+                                        .Where(b => b.Session.Package.GuideId == providerId);
+            }
+
+            var totalPackages = myPackages?.Count() ?? 0;
+            var upcomingSessions = mySessions?.Count(s => DbFunctions.TruncateTime(s.StartDate) >= today) ?? 0;
+            var totalBookings = myBookings?.Count() ?? 0;
+
+            var paidRevenue = myBookings?.Where(b => b.PaymentStatus == "Paid")
+                                         .Select(b => (decimal?)(b.Session.Package.Price * b.Participants))
+                                         .DefaultIfEmpty(0m).Sum() ?? 0m;
+
+            var pendingPayments = myBookings?.Count(b => b.PaymentStatus != "Paid") ?? 0;
+
+            var nextSessions = mySessions?
+                .Where(s => DbFunctions.TruncateTime(s.StartDate) >= today)
+                .OrderBy(s => s.StartDate).Take(5)
+                .Select(s => new UpcomingSessionItem
+                {
+                    SessionId = s.SessionId,
+                    PackageTitle = s.Package.Title,
+                    StartDate = s.StartDate,
+                    EndDate = s.EndDate,
+                    Capacity = s.Capacity,
+                    Booked = db.Bookings.Where(b => b.SessionId == s.SessionId)
+                                .Select(b => (int?)b.Participants)
+                                .DefaultIfEmpty(0).Sum() ?? 0
+                }).ToList();
+
+            var recentBookings = myBookings?.OrderByDescending(b => b.CreatedAt)
+                .Take(5).Select(b => new RecentBookingItem
+                {
+                    BookingId = b.BookingId,
+                    PackageTitle = b.Session.Package.Title,
+                    StartDate = b.Session.StartDate,
+                    Participants = b.Participants,
+                    PaymentStatus = b.PaymentStatus,
+                    CustomerName = b.CustomerName,
+                    IsApproved = b.IsApproved,
+                    Amount = (b.Session.Package.Price * b.Participants)
+                }).ToList();
+
+            var recentFeedback = db.Feedbacks.Include(f => f.Booking.Session.Package)
+                .Where(f => f.Booking.Session.Package.AgencyId == providerId)
+                .OrderByDescending(f => f.CreatedAt).Take(5)
+                .Select(f => new RecentFeedbackItem
+                {
+                    FeedbackId = f.FeedbackId,
+                    PackageTitle = f.Booking.Session.Package.Title,
+                    Rating = f.Rating,
+                    Comment = f.Comment,
+                    CreatedAt = f.CreatedAt
+                }).ToList();
+
+            var vm = new AgencyDashboardVm
+            {
+                AgencyName = isAgency
+                    ? me.AgencyProfile?.AgencyName ?? me.FullName
+                    : me.GuideProfile?.FullNameOnLicense ?? me.FullName,
+                IsApproved = me.IsApproved,
+                TotalPackages = totalPackages,
+                UpcomingSessions = upcomingSessions,
+                TotalBookings = totalBookings,
+                PaidRevenue = paidRevenue,
+                PendingPayments = pendingPayments,
+                FeedbackCount = recentFeedback.Count,
+                NextSessions = nextSessions,
+                RecentBookings = recentBookings,
+                RecentFeedback = recentFeedback
+            };
+
+            ViewBag.ActivePageGroup = ViewBag.RoleName;
+            // Render the appropriate Dashboard view based on role
+            return View("Dashboard", vm);
+        }
+
+        public ActionResult DashboardOld()
         {
             var me = GetMe();
             if (me == null) return RedirectToAction("Login", "Account");
@@ -234,30 +342,96 @@ namespace TourismManagementSystem.Controllers
 
         // ========= BOOKINGS =========
         [HttpGet]
+
         public ActionResult Bookings()
         {
             var me = GetMe();
+            bool isAgency = IsAgency(me);
+            bool isGuide = IsGuide(me);
             if (me == null) return RedirectToAction("Login", "Account");
 
             var providerId = me.UserId;
-            var bookings = db.Bookings.Include(b => b.Session.Package)
-                             .Where(b => b.Session.Package.AgencyId == providerId)
-                             .OrderByDescending(b => b.CreatedAt)
-                             .Select(b => new BookingViewModel
-                             {
-                                 BookingId = b.BookingId,
-                                 PackageTitle = b.Session.Package.Title,
-                                 CustomerName = b.CustomerName,
-                                 StartDate = b.Session.StartDate,
-                                 Participants = b.Participants,
-                                 PaymentStatus = b.PaymentStatus,
-                                 Amount = (b.Session.Package.Price * b.Participants),
-                                 IsApproved = b.IsApproved
-                             }).ToList();
 
-            ViewBag.ActivePage = "AgencyBookings";
+            // Declare bookings variable to hold the result
+            IQueryable<BookingViewModel> bookingsQuery;
+
+            // Handle Agency role: filter bookings based on AgencyId
+            if (isAgency)
+            {
+                bookingsQuery = db.Bookings.Include(b => b.Session.Package)
+                                           .Where(b => b.Session.Package.AgencyId == providerId)
+                                           .OrderByDescending(b => b.CreatedAt)
+                                           .Select(b => new BookingViewModel
+                                           {
+                                               BookingId = b.BookingId,
+                                               PackageTitle = b.Session.Package.Title,
+                                               CustomerName = b.CustomerName,
+                                               StartDate = b.Session.StartDate,
+                                               Participants = b.Participants,
+                                               PaymentStatus = b.PaymentStatus,
+                                               Amount = (b.Session.Package.Price * b.Participants),
+                                               IsApproved = b.IsApproved
+                                           });
+            }
+            // Handle Guide role: filter bookings based on GuideId
+            else if (isGuide)
+            {
+                bookingsQuery = db.Bookings.Include(b => b.Session.Package)
+                                           .Where(b => b.Session.Package.GuideId == providerId)
+                                           .OrderByDescending(b => b.CreatedAt)
+                                           .Select(b => new BookingViewModel
+                                           {
+                                               BookingId = b.BookingId,
+                                               PackageTitle = b.Session.Package.Title,
+                                               CustomerName = b.CustomerName,
+                                               StartDate = b.Session.StartDate,
+                                               Participants = b.Participants,
+                                               PaymentStatus = b.PaymentStatus,
+                                               Amount = (b.Session.Package.Price * b.Participants),
+                                               IsApproved = b.IsApproved
+                                           });
+            }
+            else
+            {
+                return RedirectToAction("AccessDenied", "Account"); // Redirect if not an Agency or Guide
+            }
+
+            var bookings = bookingsQuery.ToList();
+
+            // Set the active page based on the role
+            ViewBag.ActivePage = isAgency ? "AgencyBookings" : "GuideBookings";
+
             return View("Bookings", bookings); // reuse Agency/Bookings.cshtml
         }
+
+        //[HttpGet]
+        //public ActionResult BookingsOld()
+        //{
+        //    var me = GetMe();
+        //    bool isAgency = IsAgency(me);
+        //    bool isGuide = IsGuide(me);
+        //    if (me == null) return RedirectToAction("Login", "Account");
+
+        //    var providerId = me.UserId;
+        //    var bookings = db.Bookings.Include(b => b.Session.Package)
+        //                     .Where(b => b.Session.Package.AgencyId == providerId)
+        //                     .Where(b => b.Session.Package.GuideId == providerId)
+        //                     .OrderByDescending(b => b.CreatedAt)
+        //                     .Select(b => new BookingViewModel
+        //                     {
+        //                         BookingId = b.BookingId,
+        //                         PackageTitle = b.Session.Package.Title,
+        //                         CustomerName = b.CustomerName,
+        //                         StartDate = b.Session.StartDate,
+        //                         Participants = b.Participants,
+        //                         PaymentStatus = b.PaymentStatus,
+        //                         Amount = (b.Session.Package.Price * b.Participants),
+        //                         IsApproved = b.IsApproved
+        //                     }).ToList();
+
+        //    ViewBag.ActivePage = "AgencyBookings";
+        //    return View("Bookings", bookings); // reuse Agency/Bookings.cshtml
+        //}
 
         // ========= FEEDBACK =========
         public ActionResult Feedback()
@@ -319,6 +493,49 @@ namespace TourismManagementSystem.Controllers
             }
 
             return RedirectToAction("Profile"); // back to profile check
+        }
+
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult ApproveBooking(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.IsApproved = true;
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = "Approved" });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult RejectBooking(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.IsApproved = false;
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = "Rejected" });
+        }
+
+        [HttpPost, ValidateAntiForgeryToken]
+        public ActionResult TogglePayment(int bookingId)
+        {
+            var booking = db.Bookings.FirstOrDefault(b => b.BookingId == bookingId);
+            if (booking == null)
+                return Json(new { ok = false, error = "Booking not found" });
+
+            booking.PaymentStatus =
+                string.Equals(booking.PaymentStatus, "Paid", StringComparison.OrdinalIgnoreCase)
+                    ? "Pending" : "Paid";
+
+            db.SaveChanges();
+
+            return Json(new { ok = true, status = booking.PaymentStatus });
         }
 
     }
