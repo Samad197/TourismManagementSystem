@@ -256,7 +256,7 @@ namespace TourismManagementSystem.Controllers
 
 
         // POST: /Account/Logout
-        [HttpPost, ValidateAntiForgeryToken]
+        //[HttpPost, ValidateAntiForgeryToken]
         public ActionResult Logout()
         {
             FormsAuthentication.SignOut();
